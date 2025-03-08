@@ -18,7 +18,7 @@ class _ListNotesState extends State<ListNotes> {
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(json.decode(response.body));
     } else {
-      throw Exception("Error al cargar notas");
+      throw Exception("Error");
     }
   }
 
@@ -32,7 +32,7 @@ class _ListNotesState extends State<ListNotes> {
         } else if (snapshot.hasError) {
           return Center(child: Text("Error: ${snapshot.error}"));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(child: Text("No hay notas disponibles"));
+          return Center(child: Text("No notes yet"));
         }
 
         final notes = snapshot.data!;
@@ -45,7 +45,7 @@ class _ListNotesState extends State<ListNotes> {
                 ? (note['content'] as String).length > 20
                     ? (note['content'] as String).substring(0, 20) + "..."
                     : note['content'] as String
-                : "Sin contenido";
+                : "No content";
 
             return Card(
               margin: EdgeInsets.all(10),
