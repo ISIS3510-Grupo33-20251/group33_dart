@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
 import '../globals.dart';
+import 'note.dart';
 
 class ListNotes extends StatefulWidget {
-  
   const ListNotes({super.key});
 
   @override
@@ -44,7 +43,7 @@ class _ListNotesState extends State<ListNotes> {
 
             String contentPreview = (note.containsKey('content') && note['content'] is String)
                 ? (note['content'] as String).length > 20
-                    ?(note['content'] as String).substring(0, 20) + "..."
+                    ? (note['content'] as String).substring(0, 20) + "..."
                     : note['content'] as String
                 : "Sin contenido";
 
@@ -68,6 +67,21 @@ class _ListNotesState extends State<ListNotes> {
                   note['created_date'].toString().split("T")[0], 
                   style: TextStyle(color: Colors.grey[700]),
                 ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Note(
+                        noteId: note['_id'], 
+                        initialTitle: note['title'], 
+                        initialContent: note['content'],
+                        initialSubject: note['subject'],
+                        created_date: note['created_date'],
+                        last_modified: note['last_modified'],
+                      ),
+                    ),
+                  ).then((_) {setState(() {}); });
+                },
               ),
             );
           },
