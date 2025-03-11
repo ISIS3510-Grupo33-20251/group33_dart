@@ -1,16 +1,19 @@
 # group33_dart
 
-A new Flutter project.
+# Universe - Flutter Organization App
 
-## Getting Started
+Universe is an organization app for **Flutter** that helps users manage their schedules, connect with friends, create teams, and collaborate on projects.
 
-This project is a starting point for a Flutter application.
+## Prerequisites
+- Flutter **3.10.0** or newer
+- Dart **3.0.0** or newer
+- Android Studio or Visual Studio Code (recommended)
+- [Flutter SDK](https://flutter.dev/docs/get-started/install)
 
-A few resources to get you started if this is your first Flutter project:
+## Setup
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/universe-flutter.git
+   cd universe-flutter
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
