@@ -38,6 +38,36 @@ class AuthService {
     }
   }
 
+  Future<bool> register(String name, String email, String password) async {
+    try {
+      print("📡 Sending Register Request...");
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'name': name, 'email': email, 'password': password}),
+      );
+
+      print("➡️ URL: $baseUrl/users/auth/register");
+      print("➡️ Headers: {'Content-Type': 'application/json'}");
+      print("➡️ Payload: ${jsonEncode({'name': name, 'email': email, 'password': password})}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        await storage.write(key: 'token', value: data['token']);
+        print("✅ Registration successful! Token saved: ${data['token']}");
+        return true;
+      } else {
+        print("❌ Registration failed with status ${response.statusCode}");
+        print("🛑 Response body: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("🚨 Exception in register request: $e");
+      return false;
+    }
+  }
+
 
 
   Future<void> logout() async {

@@ -37,6 +37,7 @@ dependencies:
   shared_preferences: ^2.0.6
   flutter_secure_storage: ^9.0.0
   provider: ^6.0.5  # Use the latest version
+  flutter_svg: ^2.0.9
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -68,6 +69,13 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/google.svg
+    - assets/facebook.svg
+  fonts:
+    - family: SmoochSans
+      fonts:
+        - asset: assets/fonts/SmoochSans-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

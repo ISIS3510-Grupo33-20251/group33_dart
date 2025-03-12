@@ -17,7 +17,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Auth App',
+      title: 'UniVerse', // Update the app title here
+      theme: ThemeData(
+        fontFamily: 'SmoochSans',  // Apply the custom font globally
+      ),
       initialRoute: '/login',
       routes: {
         '/login': (context) => LoginScreen(),
@@ -26,3 +29,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
