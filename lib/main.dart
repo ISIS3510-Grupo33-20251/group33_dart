@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group33_dart/screen_flashcards.dart';
 import 'screen_notes.dart';
 
 void main() {
@@ -16,6 +17,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => ScreenNotes(),
         // '/notes': (context) => ScreenNotes(),
+        '/flashcards': (context) => ScreenFlashcard(),
       },
     );
   }
