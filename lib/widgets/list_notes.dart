@@ -59,6 +59,7 @@ class ListNotes extends StatelessWidget {
                     initialSubject: note['subject'],
                     created_date: note['created_date'],
                     last_modified: note['last_modified'],
+                    notes: notes,
                   ),
                 ),
               ).then((_) {

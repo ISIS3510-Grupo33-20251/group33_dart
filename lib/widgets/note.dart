@@ -11,6 +11,7 @@ class Note extends StatefulWidget {
   final String initialSubject;
   final String created_date;
   final String last_modified;
+  final List<Map<String, dynamic>> notes;
 
   const Note({
     super.key,
@@ -20,6 +21,7 @@ class Note extends StatefulWidget {
     required this.initialSubject,
     required this.created_date,
     required this.last_modified,
+    required this.notes,
   });
 
   @override
@@ -69,7 +71,7 @@ class _NoteState extends State<Note> {
       body: jsonEncode({
         "title": _titleController.text,
         "content": _contentController.text,
-        "subject": _subjectController.text, 
+        "subject": _subjectController.text,
         "created_date": '2024-03-07T12:00:00Z',
         "last_modified": '2024-03-07T12:00:00Z',
         "owner_id": userId
@@ -99,6 +101,22 @@ class _NoteState extends State<Note> {
     }
   }
 
+  Future<void> deleteNote() async {
+    final response = await http.delete(
+      Uri.parse("$backendUrl/notes/${widget.noteId}"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({}),
+    );
+
+    if (response.statusCode == 200) {
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error")),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -109,28 +127,103 @@ class _NoteState extends State<Note> {
 
   @override
   Widget build(BuildContext context) {
+    // Se obtiene la lista de subjects únicos a partir de widget.notes
+    final List<String> subjectOptions = widget.notes
+        .map((note) => note['subject'] as String)
+        .toSet()
+        .toList();
+
+    // Si el subject actual no está en la lista y no es vacío, se agrega
+    if (_subjectController.text.isNotEmpty &&
+        !subjectOptions.contains(_subjectController.text)) {
+      subjectOptions.add(_subjectController.text);
+    }
+
+    // Opción especial para agregar un nuevo subject
+    const String addNewOption = "Add new subject";
+    if (!subjectOptions.contains(addNewOption)) {
+      subjectOptions.add(addNewOption);
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text("Edit")),
+      appBar: AppBar(title: Text("Edit Note")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Campo de título
             TextField(
               controller: _titleController,
-              decoration: InputDecoration(labelText: "TItle"),
+              decoration: InputDecoration(labelText: "Title"),
             ),
             SizedBox(height: 10),
+            // Campo de contenido
             TextField(
               controller: _contentController,
               decoration: InputDecoration(labelText: "Content"),
               maxLines: 5,
             ),
             SizedBox(height: 10),
-            TextField(
-              controller: _subjectController,
+            // Dropdown para seleccionar o agregar un subject
+            DropdownButtonFormField<String>(
+              value: _subjectController.text.isNotEmpty
+                  ? _subjectController.text
+                  : null,
               decoration: InputDecoration(labelText: "Subject"),
+              items: subjectOptions.map((subject) {
+                return DropdownMenuItem<String>(
+                  value: subject,
+                  child: Text(subject),
+                );
+              }).toList(),
+              onChanged: (value) async {
+                if (value == addNewOption) {
+                  // Mostrar diálogo para ingresar un nuevo subject
+                  final newSubject = await showDialog<String>(
+                    context: context,
+                    builder: (context) {
+                      final TextEditingController newSubjectController =
+                          TextEditingController();
+                      return AlertDialog(
+                        title: Text("New Subject"),
+                        content: TextField(
+                          controller: newSubjectController,
+                          decoration: InputDecoration(
+                            labelText: "Type new subject",
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text("Cancel"),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(
+                                  context, newSubjectController.text);
+                            },
+                            child: Text("Add"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                  if (newSubject != null && newSubject.isNotEmpty) {
+                    setState(() {
+                      _subjectController.text = newSubject;
+                    });
+                  }
+                } else {
+                  setState(() {
+                    _subjectController.text = value ?? "";
+                  });
+                }
+              },
             ),
             SizedBox(height: 20),
+            // Botón para guardar (crear o actualizar)
             ElevatedButton(
               onPressed: () {
                 if (widget.noteId.isEmpty) {
@@ -143,6 +236,16 @@ class _NoteState extends State<Note> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (widget.noteId.isNotEmpty) {
+            deleteNote();
+          } else {
+            Navigator.pop(context);
+          }
+        },
+        child: Icon(Icons.delete),
       ),
     );
   }

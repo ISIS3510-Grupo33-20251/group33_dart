@@ -13,8 +13,10 @@ class ScreenNotes extends StatefulWidget {
 }
 
 class _ScreenNotesState extends State<ScreenNotes> {
+  
   late Future<List<Map<String, dynamic>>> futureNotes;
   String? _selectedSubject; // null significa sin filtro (todas las notas)
+  List<Map<String, dynamic>> _allNotes = [];
 
   @override
   void initState() {
@@ -60,6 +62,7 @@ class _ScreenNotesState extends State<ScreenNotes> {
             int noteCount = 0;
             if (snapshot.hasData) {
               noteCount = _getFilteredCount(snapshot.data!);
+              _allNotes = snapshot.data!;
             }
 
             return Stack(
@@ -185,7 +188,7 @@ class _ScreenNotesState extends State<ScreenNotes> {
                       context,
                       '/flashcards',
                       arguments:{
-                        'notes': notes,
+                        'notes':  _allNotes,
                       },
                     );
                   },
@@ -209,6 +212,8 @@ class _ScreenNotesState extends State<ScreenNotes> {
                 initialSubject: '',
                 created_date: '',
                 last_modified: '',
+
+                notes: _allNotes,
               ),
             ),
           ).then((_) {
