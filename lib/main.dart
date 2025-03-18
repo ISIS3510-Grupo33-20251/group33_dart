@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'presentation/auth/login_screen.dart';
 import 'presentation/auth/register_screen.dart';
 import 'presentation/auth/auth_viewmodel.dart';
+import 'presentation/auth/welcome_screen.dart';
 
 void main() {
   runApp(
@@ -17,12 +18,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'UniVerse', // Update the app title here
+      title: 'UniVerse',
       theme: ThemeData(
-        fontFamily: 'SmoochSans',  // Apply the custom font globally
+        fontFamily: 'SmoochSans',
+        primarySwatch: Colors.blue,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            textStyle: const TextStyle(fontSize: 16),
+          ),
+        ),
       ),
-      initialRoute: '/login',
+      initialRoute: '/',
       routes: {
+        '/': (context) => const WelcomeScreen(),
         '/login': (context) => LoginScreen(),
         '/register': (context) => RegisterScreen(),
       },
