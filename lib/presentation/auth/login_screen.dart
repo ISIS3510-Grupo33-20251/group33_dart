@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'auth_viewmodel.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -11,6 +10,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  static const Color primaryColor = Color(0xFF7D91FA);
 
   void _login() async {
     final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
@@ -18,6 +18,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _emailController.text,
       _passwordController.text,
     );
+
+    if (!mounted) return;
 
     final message = success
         ? 'Login Successful! 🎉'
@@ -29,152 +31,176 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: success ? Colors.green : Colors.red,
       ),
     );
-
-    if (success) {
-      print("✅ Login success!");
-    } else {
-      print("❌ Login failed. Incorrect email or password.");
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authViewModel = Provider.of<AuthViewModel>(context);
-    final double screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-
-              // Logo
-              const Text(
-                "Uni",
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.w300),
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Círculos decorativos
+          Positioned(
+            right: -100,
+            top: -50,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.7),
+                shape: BoxShape.circle,
               ),
-              const Text(
-                "Verse",
-                style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.blue),
+            ),
+          ),
+          Positioned(
+            left: -70,
+            bottom: -100,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                color: const Color(0xFFA5B3FF).withOpacity(0.7),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 40),
-
-              // Login Fields
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text("Email", style: TextStyle(fontSize: 18)),
-              ),
-              TextField(controller: _emailController),
-              const SizedBox(height: 16),
-
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text("Password", style: TextStyle(fontSize: 18)),
-              ),
-              TextField(controller: _passwordController, obscureText: true),
-              const SizedBox(height: 24),
-
-              // Login Button
-              authViewModel.isLoading
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                onPressed: _login,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: Size(screenWidth * 0.8, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: const Text("Log-in"),
-              ),
-              const SizedBox(height: 16),
-
-              // Log-in & Sign-up options
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
                 children: [
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text("Create a new account"),
+                  // Back button
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios),
+                      color: Colors.grey[800],
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Logo
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        "Uni",
+                        style: TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                      Text(
+                        "Verse",
+                        style: TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                      SizedBox(height: 40),
+                      // Logo image
+                      Image(
+                        image: AssetImage('assets/logos/logo.png'),
+                        height: 120,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 80),
+                  // Login Fields
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Email or Username",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[600],
+                            fontFamily: 'Montserrat',
+                          ),
+                        ),
+                        TextField(
+                          controller: _emailController,
+                          style: const TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                          ),
+                          decoration: InputDecoration(
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: const UnderlineInputBorder(
+                              borderSide: BorderSide(color: primaryColor),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          "Password",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[600],
+                            fontFamily: 'Montserrat',
+                          ),
+                        ),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          style: const TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                          ),
+                          decoration: InputDecoration(
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: const UnderlineInputBorder(
+                              borderSide: BorderSide(color: primaryColor),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        // Login Button
+                        authViewModel.isLoading
+                            ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                            : ElevatedButton(
+                                onPressed: _login,
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 50),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  backgroundColor: primaryColor,
+                                ),
+                                child: const Text(
+                                  "Log in",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontFamily: 'Montserrat',
+                                  ),
+                                ),
+                              ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.center,
-              //   children: [
-              //     Expanded(
-              //       child: _socialLoginButton(
-              //         icon: "assets/google.svg",
-              //         text: "Sign in with Google",
-              //         onTap: () {},
-              //         isSvg: true,
-              //       ),
-              //     ),
-              //   ],
-              // ),
-              // const SizedBox(height: 12),
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.center,
-              //   children: [
-              //     Expanded(
-              //       child: _socialLoginButton(
-              //         icon: "assets/facebook.svg",
-              //         text: "Sign in with Facebook",
-              //         onTap: () {},
-              //         isSvg: true, // Agregamos esta nueva propiedad
-              //       ),
-              //     ),
-              //   ],
-              // ),
-
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
-
-  Widget _socialLoginButton({
-    required String icon,
-    required String text,
-    required VoidCallback onTap,
-    bool isSvg = false, // Add this parameter
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 5,
-              spreadRadius: 1,
-            )
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            isSvg
-                ? SvgPicture.asset(icon, height: 24)  // Correct way to load SVG
-                : Image.asset(icon, height: 24),     // Loads PNG/JPG normally
-            const SizedBox(width: 12),
-            Text(text, style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-      ),
-    );
-  }
-  }
+}
 
 
 
