@@ -72,6 +72,7 @@ flutter:
     - assets/logos/logo.png
     - assets/google.svg
     - assets/facebook.svg
+    - assets/logo.png
   fonts:
     - family: Montserrat
       fonts:
