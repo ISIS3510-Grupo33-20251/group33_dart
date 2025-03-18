@@ -39,21 +39,7 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pushNamed(
                   context, 
-                  '/flashcards',
-                  arguments: {
-                    'notes': [
-                      {
-                        'subject': 'Mathematics',
-                        'title': 'Sample Note 1',
-                        'content': 'This is a sample note for math'
-                      },
-                      {
-                        'subject': 'Physics',
-                        'title': 'Sample Note 2',
-                        'content': 'This is a sample note for physics'
-                      }
-                    ]
-                  }
+                  '/notes',
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -64,7 +50,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                'Flashcards',
+                'Notes',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,

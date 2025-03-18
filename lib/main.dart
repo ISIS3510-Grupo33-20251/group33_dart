@@ -37,6 +37,7 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
         '/flashcards': (context) => const ScreenFlashcard(),
+        '/notes': (context) => const ScreenNotes(),
       },
     );
   }

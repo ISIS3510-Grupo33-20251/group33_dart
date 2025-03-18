@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../../globals.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -30,10 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text,
         _passwordController.text,
       );
-      
-      // Here you would typically save the token
-      // SharedPreferences prefs = await SharedPreferences.getInstance();
-      // await prefs.setString('token', response['token']);
+      userId = response["userId"];
+
 
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
@@ -51,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Círculos decorativos
           Positioned(
             right: -100,
             top: -50,
@@ -77,135 +75,128 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  // Back button
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios),
-                      color: Colors.grey[800],
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios),
+                        color: Colors.grey[800],
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Logo
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Text(
-                        "Uni",
-                        style: TextStyle(
-                          fontSize: 64,
-                          fontWeight: FontWeight.w300,
-                          fontFamily: 'SmoochSans',
-                        ),
-                      ),
-                      Text(
-                        "Verse",
-                        style: TextStyle(
-                          fontSize: 64,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                          fontFamily: 'SmoochSans',
-                        ),
-                      ),
-                      SizedBox(height: 40),
-                      // Logo image
-                      Image(
-                        image: AssetImage('assets/logos/logo.png'),
-                        height: 120,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 80),
-                  // Login Fields
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 20),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          "Email or Username",
+                        const Text(
+                          "Uni",
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[600],
-                            fontFamily: 'Montserrat',
+                            fontSize: 64,
+                            fontWeight: FontWeight.w300,
+                            fontFamily: 'SmoochSans',
                           ),
                         ),
-                        TextField(
-                          controller: _emailController,
-                          style: const TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 18,
-                          ),
-                          decoration: InputDecoration(
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(color: primaryColor),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          "Password",
+                        const Text(
+                          "Verse",
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[600],
-                            fontFamily: 'Montserrat',
-                          ),
-                        ),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          style: const TextStyle(
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 18,
-                          ),
-                          decoration: InputDecoration(
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(color: primaryColor),
-                            ),
+                            fontSize: 64,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                            fontFamily: 'SmoochSans',
                           ),
                         ),
                         const SizedBox(height: 40),
-                        // Login Button
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _login,
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            backgroundColor: primaryColor,
-                          ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text(
-                                  "Log in",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Montserrat',
-                                  ),
-                                ),
+                        const Image(
+                          image: AssetImage('assets/logos/logo.png'),
+                          height: 120,
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 40),
+                    Text(
+                      "Email or Username",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
+                        fontFamily: 'Montserrat',
+                      ),
+                    ),
+                    TextField(
+                      controller: _emailController,
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                      ),
+                      decoration: InputDecoration(
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: primaryColor),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Password",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
+                        fontFamily: 'Montserrat',
+                      ),
+                    ),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                      ),
+                      decoration: InputDecoration(
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: primaryColor),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        backgroundColor: primaryColor,
+                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              "Log in",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Montserrat',
+                              ),
+                            ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           ),
@@ -214,6 +205,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-
-
