@@ -102,6 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(
                           fontSize: 64,
                           fontWeight: FontWeight.w300,
+                          fontFamily: 'SmoochSans',
                         ),
                       ),
                       Text(
@@ -110,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           fontSize: 64,
                           fontWeight: FontWeight.bold,
                           color: primaryColor,
+                          fontFamily: 'SmoochSans',
                         ),
                       ),
                       SizedBox(height: 40),
