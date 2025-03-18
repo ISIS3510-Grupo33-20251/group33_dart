@@ -73,14 +73,14 @@ flutter:
     - assets/google.svg
     - assets/facebook.svg
   fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-VariableFont_wght.ttf
+        - asset: assets/fonts/Montserrat-Italic-VariableFont_wght.ttf
+          style: italic
     - family: SmoochSans
       fonts:
         - asset: assets/fonts/SmoochSans-Regular.ttf
-    - family: Montserrat
-      fonts:
-        - asset: assets/fonts/Montserrat-Italic-VariableFont_wght.ttf
-          style: italic
-        - asset: assets/fonts/Montserrat-VariableFont_wght.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

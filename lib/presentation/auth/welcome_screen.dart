@@ -56,6 +56,7 @@ class WelcomeScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 64,
                           fontWeight: FontWeight.w300,
+                          fontFamily: 'SmoochSans',
                         ),
                       ),
                       Text(
@@ -64,6 +65,7 @@ class WelcomeScreen extends StatelessWidget {
                           fontSize: 64,
                           fontWeight: FontWeight.bold,
                           color: primaryColor,
+                          fontFamily: 'SmoochSans',
                         ),
                       ),
                     ],
