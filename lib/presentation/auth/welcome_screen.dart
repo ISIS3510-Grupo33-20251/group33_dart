@@ -54,14 +54,14 @@ class WelcomeScreen extends StatelessWidget {
                       Text(
                         "Uni",
                         style: TextStyle(
-                          fontSize: 48,
+                          fontSize: 64,
                           fontWeight: FontWeight.w300,
                         ),
                       ),
                       Text(
                         "Verse",
                         style: TextStyle(
-                          fontSize: 48,
+                          fontSize: 64,
                           fontWeight: FontWeight.bold,
                           color: primaryColor,
                         ),
@@ -100,7 +100,7 @@ class WelcomeScreen extends StatelessWidget {
                     child: const Text(
                       "Log in",
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Montserrat',
                       ),
@@ -117,7 +117,7 @@ class WelcomeScreen extends StatelessWidget {
                     child: const Text(
                       "Create a new account",
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontFamily: 'Montserrat',
                         color: primaryColor,
                       ),
@@ -154,24 +154,26 @@ class WelcomeScreen extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.grey.shade300),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               text,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
                 color: Colors.grey.shade700,
                 fontFamily: 'Montserrat',
               ),
             ),
-            SvgPicture.asset(icon, height: 20),
+            const SizedBox(width: 12),
+            SvgPicture.asset(icon, height: 24),
           ],
         ),
       ),

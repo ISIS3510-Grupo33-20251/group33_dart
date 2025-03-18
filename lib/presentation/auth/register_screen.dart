@@ -1,47 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'auth_viewmodel.dart';
+import '../../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({Key? key}) : super(key: key);
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _authService = AuthService();
+  bool _isLoading = false;
   static const Color primaryColor = Color(0xFF7D91FA);
 
-  void _register() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
+  Future<void> _register() async {
+    if (_emailController.text.isEmpty || 
+        _passwordController.text.isEmpty ||
+        _confirmPasswordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match! ❌'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Please fill all fields')),
       );
       return;
     }
 
-    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-    final success = await authViewModel.login(
-      _emailController.text,
-      _passwordController.text,
-    );
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
 
-    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-    final message = success
-        ? 'Registration Successful! 🎉'
-        : 'Registration Failed! ❌';
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: success ? Colors.green : Colors.red,
-      ),
-    );
+    try {
+      final response = await _authService.register(
+        _emailController.text,
+        _passwordController.text,
+      );
+      
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -101,14 +112,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Text(
                         "Uni",
                         style: TextStyle(
-                          fontSize: 48,
+                          fontSize: 64,
                           fontWeight: FontWeight.w300,
                         ),
                       ),
                       Text(
                         "Verse",
                         style: TextStyle(
-                          fontSize: 48,
+                          fontSize: 64,
                           fontWeight: FontWeight.bold,
                           color: primaryColor,
                         ),
@@ -130,8 +141,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Text(
                           "Email",
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                             color: Colors.grey[600],
                             fontFamily: 'Montserrat',
                           ),
@@ -140,15 +151,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           controller: _emailController,
                           style: const TextStyle(
                             fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
                           ),
                           decoration: InputDecoration(
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(color: primaryColor),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
@@ -156,8 +164,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Text(
                           "Password",
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                             color: Colors.grey[600],
                             fontFamily: 'Montserrat',
                           ),
@@ -167,8 +175,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           obscureText: true,
                           style: const TextStyle(
                             fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
                           ),
                           decoration: InputDecoration(
                             enabledBorder: UnderlineInputBorder(
@@ -183,8 +191,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Text(
                           "Confirm Password",
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                             color: Colors.grey[600],
                             fontFamily: 'Montserrat',
                           ),
@@ -194,8 +202,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           obscureText: true,
                           style: const TextStyle(
                             fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
                           ),
                           decoration: InputDecoration(
                             enabledBorder: UnderlineInputBorder(
@@ -208,25 +216,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         const SizedBox(height: 40),
                         // Register Button
-                        authViewModel.isLoading
-                            ? const Center(child: CircularProgressIndicator(color: primaryColor))
-                            : ElevatedButton(
-                                onPressed: _register,
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 50),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  backgroundColor: primaryColor,
-                                ),
-                                child: const Text(
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _register,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            backgroundColor: primaryColor,
+                          ),
+                          child: _isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Text(
                                   "Sign up",
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
                                     fontFamily: 'Montserrat',
                                   ),
                                 ),
-                              ),
+                        ),
                       ],
                     ),
                   ),

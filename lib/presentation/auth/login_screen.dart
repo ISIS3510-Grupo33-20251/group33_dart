@@ -1,36 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'auth_viewmodel.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({Key? key}) : super(key: key);
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _authService = AuthService();
+  bool _isLoading = false;
   static const Color primaryColor = Color(0xFF7D91FA);
 
-  void _login() async {
-    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-    final success = await authViewModel.login(
-      _emailController.text,
-      _passwordController.text,
-    );
+  Future<void> _login() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields')),
+      );
+      return;
+    }
 
-    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-    final message = success
-        ? 'Login Successful! 🎉'
-        : 'Login Failed! ❌ Please check your credentials.';
+    try {
+      final response = await _authService.login(
+        _emailController.text,
+        _passwordController.text,
+      );
+      
+      // Here you would typically save the token
+      // SharedPreferences prefs = await SharedPreferences.getInstance();
+      // await prefs.setString('token', response['token']);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: success ? Colors.green : Colors.red,
-      ),
-    );
+      Navigator.pushReplacementNamed(context, '/home');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -90,14 +104,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         "Uni",
                         style: TextStyle(
-                          fontSize: 48,
+                          fontSize: 64,
                           fontWeight: FontWeight.w300,
                         ),
                       ),
                       Text(
                         "Verse",
                         style: TextStyle(
-                          fontSize: 48,
+                          fontSize: 64,
                           fontWeight: FontWeight.bold,
                           color: primaryColor,
                         ),
@@ -119,8 +133,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           "Email or Username",
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                             color: Colors.grey[600],
                             fontFamily: 'Montserrat',
                           ),
@@ -129,8 +143,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _emailController,
                           style: const TextStyle(
                             fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
                           ),
                           decoration: InputDecoration(
                             enabledBorder: UnderlineInputBorder(
@@ -145,8 +159,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           "Password",
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                             color: Colors.grey[600],
                             fontFamily: 'Montserrat',
                           ),
@@ -156,8 +170,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           obscureText: true,
                           style: const TextStyle(
                             fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
                           ),
                           decoration: InputDecoration(
                             enabledBorder: UnderlineInputBorder(
@@ -170,25 +184,26 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 40),
                         // Login Button
-                        authViewModel.isLoading
-                            ? const Center(child: CircularProgressIndicator(color: primaryColor))
-                            : ElevatedButton(
-                                onPressed: _login,
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 50),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  backgroundColor: primaryColor,
-                                ),
-                                child: const Text(
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _login,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            backgroundColor: primaryColor,
+                          ),
+                          child: _isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Text(
                                   "Log in",
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
                                     fontFamily: 'Montserrat',
                                   ),
                                 ),
-                              ),
+                        ),
                       ],
                     ),
                   ),
