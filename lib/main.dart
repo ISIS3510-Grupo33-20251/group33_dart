@@ -3,7 +3,7 @@ import 'presentation/auth/login_screen.dart';
 import 'presentation/auth/register_screen.dart';
 import 'presentation/auth/welcome_screen.dart';
 import 'presentation/home/home_screen.dart';
-import 'package:group33_dart/screen_flashcards.dart';
+import 'screen_flashcards.dart';
 import 'screen_notes.dart';
 
 void main() {
@@ -36,6 +36,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
+        '/flashcards': (context) => const ScreenFlashcard(),
       },
     );
   }

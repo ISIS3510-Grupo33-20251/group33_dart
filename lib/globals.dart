@@ -1,2 +1,5 @@
-String userId = "67cb84696e7181fb21f41c31";
-String backendUrl = "http://192.168.1.13:8000"; 
+// URL del backend
+String backendUrl = 'http://10.0.2.2:8000';
+
+// ID del usuario (esto debería venir de tu sistema de autenticación)
+String userId = '1'; // Valor por defecto 

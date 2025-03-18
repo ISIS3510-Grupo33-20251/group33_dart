@@ -36,7 +36,26 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.pushNamed(
+                  context, 
+                  '/flashcards',
+                  arguments: {
+                    'notes': [
+                      {
+                        'subject': 'Mathematics',
+                        'title': 'Sample Note 1',
+                        'content': 'This is a sample note for math'
+                      },
+                      {
+                        'subject': 'Physics',
+                        'title': 'Sample Note 2',
+                        'content': 'This is a sample note for physics'
+                      }
+                    ]
+                  }
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -45,7 +64,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                'Button 1',
+                'Flashcards',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
