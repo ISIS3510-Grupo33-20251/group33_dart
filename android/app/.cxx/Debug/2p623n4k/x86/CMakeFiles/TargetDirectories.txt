@@ -1,0 +1,2 @@
+C:/Users/Malelizarazo/StudioProjects/group33_dart/android/app/.cxx/Debug/2p623n4k/x86/CMakeFiles/edit_cache.dir
+C:/Users/Malelizarazo/StudioProjects/group33_dart/android/app/.cxx/Debug/2p623n4k/x86/CMakeFiles/rebuild_cache.dir

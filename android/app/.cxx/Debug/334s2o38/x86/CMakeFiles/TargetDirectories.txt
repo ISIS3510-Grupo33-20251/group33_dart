@@ -1,0 +1,2 @@
+C:/Users/Malelizarazo/OneDrive - Universidad de los Andes/U/10/Moviles/group33_dart/android/app/.cxx/Debug/334s2o38/x86/CMakeFiles/edit_cache.dir
+C:/Users/Malelizarazo/OneDrive - Universidad de los Andes/U/10/Moviles/group33_dart/android/app/.cxx/Debug/334s2o38/x86/CMakeFiles/rebuild_cache.dir

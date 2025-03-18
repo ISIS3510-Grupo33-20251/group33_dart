@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:group33_dart/screen_flashcards.dart';
+import 'presentation/auth/login_screen.dart';
+import 'presentation/auth/register_screen.dart';
+import 'presentation/auth/welcome_screen.dart';
+import 'presentation/home/home_screen.dart';
+import 'screen_flashcards.dart';
 import 'screen_notes.dart';
 
 void main() {
@@ -7,17 +11,32 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Navegación',
-      initialRoute: '/',  // Ruta inicial
+      title: 'UniVerse',
+      theme: ThemeData(
+        fontFamily: 'Montserrat',
+        primarySwatch: Colors.blue,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+      initialRoute: '/welcome',
       routes: {
-        '/': (context) => ScreenNotes(),
-        // '/notes': (context) => ScreenNotes(),
-        '/flashcards': (context) => ScreenFlashcard(),
+        '/welcome': (context) => const WelcomeScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/flashcards': (context) => const ScreenFlashcard(),
       },
     );
   }
