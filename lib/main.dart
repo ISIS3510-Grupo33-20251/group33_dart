@@ -4,6 +4,7 @@ import 'presentation/auth/login_screen.dart';
 import 'presentation/auth/register_screen.dart';
 import 'presentation/auth/auth_viewmodel.dart';
 import 'presentation/auth/welcome_screen.dart';
+import 'presentation/home/home_screen.dart';
 
 void main() {
   runApp(
@@ -28,11 +29,12 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      initialRoute: '/',
+      initialRoute: '/welcome',
       routes: {
-        '/': (context) => const WelcomeScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => LoginScreen(),
         '/register': (context) => RegisterScreen(),
+        '/home': (context) => const HomeScreen(),
       },
     );
   }
