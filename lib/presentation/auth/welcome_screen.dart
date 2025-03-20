@@ -41,26 +41,30 @@ class WelcomeScreen extends StatelessWidget {
           ),
           // Contenido principal
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Spacer(flex: 2),
-                  // Logo text
-                  Column(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                  ),
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 40),
+                      const Text(
                         "Uni",
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 64,
                           fontWeight: FontWeight.w300,
                           fontFamily: 'SmoochSans',
                         ),
                       ),
-                      Text(
+                      const Text(
                         "Verse",
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 64,
                           fontWeight: FontWeight.bold,
@@ -68,77 +72,68 @@ class WelcomeScreen extends StatelessWidget {
                           fontFamily: 'SmoochSans',
                         ),
                       ),
+                      const SizedBox(height: 40),
+                      const Image(
+                        image: AssetImage('assets/logos/logo.png'),
+                        height: 120,
+                      ),
+                      const SizedBox(height: 60),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          backgroundColor: primaryColor,
+                        ),
+                        child: const Text(
+                          "Log in",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Montserrat',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          );
+                        },
+                        child: const Text(
+                          "Create a new account",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontFamily: 'Montserrat',
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _socialButton(
+                        icon: "assets/google.svg",
+                        text: "Sign in with Google",
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 16),
+                      _socialButton(
+                        icon: "assets/facebook.svg",
+                        text: "Sign in with Facebook",
+                        onTap: () {},
+                      ),
+                      const SizedBox(height: 40),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  // Logo icon
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFA5B3FF).withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Image.asset(
-                      'assets/logos/logo.png',
-                      height: 80,
-                    ),
-                  ),
-                  const Spacer(flex: 2),
-                  // Botones
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor: primaryColor,
-                    ),
-                    child: const Text(
-                      "Log in",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Montserrat',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => RegisterScreen()),
-                      );
-                    },
-                    child: const Text(
-                      "Create a new account",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontFamily: 'Montserrat',
-                        color: primaryColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _socialButton(
-                    icon: "assets/google.svg",
-                    text: "Sign in with Google",
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 16),
-                  _socialButton(
-                    icon: "assets/facebook.svg",
-                    text: "Sign in with Facebook",
-                    onTap: () {},
-                  ),
-                  const Spacer(),
-                ],
+                ),
               ),
             ),
           ),

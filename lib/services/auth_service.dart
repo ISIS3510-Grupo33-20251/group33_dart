@@ -2,19 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../globals.dart';
 
 class AuthService {
   static String get baseUrl {
-    // Si estamos en debug mode, usamos diferentes URLs dependiendo de la plataforma
-    if (kDebugMode) {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:8000/users/auth'; // Para emulador Android
-      } else if (Platform.isIOS) {
-        return 'http://127.0.0.1:8000/users/auth'; // Para simulador iOS
-      }
-    }
-    // Para producción o casos no manejados, usa localhost
-    return 'http://127.0.0.1:8000/users/auth';
+    return '$backendUrl/users/auth';
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
