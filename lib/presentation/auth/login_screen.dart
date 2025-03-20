@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../globals.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/auth/login_viewmodel.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -12,8 +12,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
-  bool _isLoading = false;
   static const Color primaryColor = Color(0xFF7D91FA);
 
   Future<void> _login() async {
@@ -24,23 +22,20 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    final viewModel = context.read<LoginViewModel>();
+    final success = await viewModel.login(
+      _emailController.text,
+      _passwordController.text,
+    );
 
-    try {
-      final response = await _authService.login(
-        _emailController.text,
-        _passwordController.text,
-      );
-      userId = response["userId"];
+    if (!mounted) return;
 
-
+    if (success) {
       Navigator.pushReplacementNamed(context, '/home');
-    } catch (e) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(viewModel.error ?? 'An error occurred')),
       );
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -181,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 40),
                       ElevatedButton(
-                        onPressed: _isLoading ? null : _login,
+                        onPressed: _login,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
@@ -189,16 +184,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           backgroundColor: primaryColor,
                         ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                                "Log in",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'Montserrat',
-                                ),
-                              ),
+                        child: const Text(
+                          "Log in",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Montserrat',
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
                     ],

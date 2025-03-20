@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../globals.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/auth/register_viewmodel.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -13,8 +13,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _authService = AuthService();
-  bool _isLoading = false;
   static const Color primaryColor = Color(0xFF7D91FA);
 
   Future<void> _register() async {
@@ -34,25 +32,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    final viewModel = context.read<RegisterViewModel>();
+    final success = await viewModel.register(
+      _emailController.text,
+      _passwordController.text,
+    );
 
-    try {
-      final response = await _authService.register(
-        _emailController.text,
-        _passwordController.text,
-      );
-      
-      userId = response["userId"];
-      
-      if (!mounted) return;
+    if (!mounted) return;
+
+    if (success) {
       Navigator.pushReplacementNamed(context, '/home');
-    } catch (e) {
-      if (!mounted) return;
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(viewModel.error ?? 'An error occurred')),
       );
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -228,7 +221,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           const SizedBox(height: 40),
                           // Register Button
                           ElevatedButton(
-                            onPressed: _isLoading ? null : _register,
+                            onPressed: _register,
                             style: ElevatedButton.styleFrom(
                               minimumSize: const Size(double.infinity, 50),
                               shape: RoundedRectangleBorder(
@@ -236,16 +229,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               backgroundColor: primaryColor,
                             ),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text(
-                                    "Sign up",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'Montserrat',
-                                    ),
-                                  ),
+                            child: const Text(
+                              "Sign up",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Montserrat',
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 20),
                         ],
