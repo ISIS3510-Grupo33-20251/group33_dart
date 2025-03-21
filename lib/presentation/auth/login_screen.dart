@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/auth/login_viewmodel.dart';
+import '../viewmodels/login_viewmodel.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -45,6 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // Decorative circles
           Positioned(
             right: -100,
             top: -50,
@@ -80,8 +81,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Back button
                       Align(
                         alignment: Alignment.centerLeft,
                         child: IconButton(
@@ -93,10 +94,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
+                      // Logo
                       Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
+                        children: const [
+                          Text(
                             "Uni",
                             style: TextStyle(
                               fontSize: 64,
@@ -104,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontFamily: 'SmoochSans',
                             ),
                           ),
-                          const Text(
+                          Text(
                             "Verse",
                             style: TextStyle(
                               fontSize: 64,
@@ -113,87 +115,135 @@ class _LoginScreenState extends State<LoginScreen> {
                               fontFamily: 'SmoochSans',
                             ),
                           ),
-                          const SizedBox(height: 40),
-                          const Image(
+                          SizedBox(height: 40),
+                          // Logo image
+                          Image(
                             image: AssetImage('assets/logos/logo.png'),
                             height: 120,
                           ),
                         ],
                       ),
                       const SizedBox(height: 40),
-                      Text(
-                        "Email or Username",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[600],
-                          fontFamily: 'Montserrat',
-                        ),
+                      // Login Fields
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Email",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                              fontFamily: 'Montserrat',
+                            ),
+                          ),
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            style: const TextStyle(
+                              fontFamily: 'Montserrat',
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "email@example.com",
+                              hintStyle: TextStyle(
+                                color: Colors.grey[400],
+                                fontFamily: 'Montserrat',
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            "Password",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                              fontFamily: 'Montserrat',
+                            ),
+                          ),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            style: const TextStyle(
+                              fontFamily: 'Montserrat',
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "••••••••",
+                              hintStyle: TextStyle(
+                                color: Colors.grey[400],
+                                fontFamily: 'Montserrat',
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                        ],
                       ),
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(
-                          fontFamily: 'Montserrat',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                        ),
-                        decoration: InputDecoration(
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              _login();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              backgroundColor: primaryColor,
+                            ),
+                            child: Consumer<LoginViewModel>(
+                              builder: (context, viewModel, child) {
+                                return viewModel.isLoading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white,
+                                      )
+                                    : const Text(
+                                        "Log in",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Montserrat',
+                                        ),
+                                      );
+                              },
+                            ),
                           ),
-                          focusedBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: primaryColor),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () {
+                              // Password recovery would go here
+                            },
+                            child: const Text(
+                              "Forgot Password?",
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontFamily: 'Montserrat',
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-                      Text(
-                        "Password",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[600],
-                          fontFamily: 'Montserrat',
-                        ),
-                      ),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        style: const TextStyle(
-                          fontFamily: 'Montserrat',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                        ),
-                        decoration: InputDecoration(
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: const UnderlineInputBorder(
-                            borderSide: BorderSide(color: primaryColor),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                      ElevatedButton(
-                        onPressed: _login,
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          backgroundColor: primaryColor,
-                        ),
-                        child: const Text(
-                          "Log in",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Montserrat',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -204,4 +254,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-}
+} 

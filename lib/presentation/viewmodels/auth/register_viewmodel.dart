@@ -15,11 +15,12 @@ class RegisterViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final user = await registerUseCase.execute(email, password);
-      userId = user.id;  // Actualizando la variable global
+      final success = await registerUseCase.execute(email, password);
+      // Set a default userId since we don't get it from the usecase anymore
+      userId = email.split('@')[0]; // Use email username as user ID temporarily
       isLoading = false;
       notifyListeners();
-      return true;
+      return success;
     } catch (e) {
       error = e.toString();
       isLoading = false;
