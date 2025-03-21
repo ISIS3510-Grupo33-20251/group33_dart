@@ -12,7 +12,6 @@ class MainMenuPage extends StatelessWidget {
         MaterialPageRoute(builder: (context) => const NearbyFriendsPage()),
       );
     } else {
-      // Aquí puedes mostrar un SnackBar para pruebas
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Selected: $value')),
       );
@@ -48,8 +47,11 @@ class MainMenuPage extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(child: Text('Content goes here')),
+      body: const Center(child: Text('horario')),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.black,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.grey[400],
         currentIndex: 1,
         items: const [
           BottomNavigationBarItem(
