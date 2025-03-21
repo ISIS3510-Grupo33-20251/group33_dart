@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'main_menu.dart'; // Asegúrate que el archivo se llama así y está en la misma carpeta
+import 'main_menu.dart';
 
 void main() {
   runApp(const MyApp());

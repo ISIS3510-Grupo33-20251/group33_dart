@@ -28,7 +28,7 @@ class PopupMenuWidget extends StatelessWidget {
       value: label.toLowerCase(),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        width: 150, // controla el ancho del menú
+        width: 150,
         child: Text(
           label,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),

@@ -90,7 +90,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
               friend.latitude,
               friend.longitude,
             ) /
-            1000; // distance in km
+            1000; // to km
       }
 
       fetchedFriends.sort((a, b) => a.distance.compareTo(b.distance));
@@ -129,7 +129,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
           IconButton(
             icon: const Icon(Icons.add, color: Colors.black),
             onPressed: () {
-              // Acción al presionar "+"
+              // to program the add friends
             },
           ),
         ],

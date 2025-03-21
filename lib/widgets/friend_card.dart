@@ -9,8 +9,8 @@ class FriendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.white, // Fondo blanco del Card
-      elevation: 1, // Sombra suave
+      color: Colors.white,
+      elevation: 1,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -29,7 +29,7 @@ class FriendCard extends StatelessWidget {
         ),
         subtitle: Text('${friend.distance.toStringAsFixed(2)} km away'),
         onTap: () {
-          // Acción al tocar el friend
+          // this works for viewing a friends schedule
         },
       ),
     );
