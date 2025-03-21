@@ -49,6 +49,11 @@ class MainMenuPage extends StatelessWidget {
       ),
       body: const Center(child: Text('horario')),
       bottomNavigationBar: BottomNavigationBar(
+        onTap: (index) {
+          if (index == 2) {
+            Navigator.pushNamed(context, '/notes');
+          }
+        },
         backgroundColor: Colors.black,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.grey[400],
@@ -58,7 +63,7 @@ class MainMenuPage extends StatelessWidget {
               icon: Icon(Icons.notifications), label: 'Reminders'),
           BottomNavigationBarItem(
               icon: Icon(Icons.calendar_today), label: 'Schedule'),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Assignments'),
+          BottomNavigationBarItem(icon: Icon(Icons.edit_note), label: 'Notes'),
         ],
       ),
     );
