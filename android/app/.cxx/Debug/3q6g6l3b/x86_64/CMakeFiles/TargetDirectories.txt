@@ -1,0 +1,2 @@
+C:/Users/nicol/group33_dart/android/app/.cxx/Debug/3q6g6l3b/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/nicol/group33_dart/android/app/.cxx/Debug/3q6g6l3b/x86_64/CMakeFiles/rebuild_cache.dir
