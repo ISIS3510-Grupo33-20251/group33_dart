@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-
+import 'package:group33_dart/globals.dart';
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
 
@@ -40,6 +40,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _emailController.text,
         _passwordController.text,
       );
+
+      userId = response["userId"];
       
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
