@@ -11,6 +11,9 @@ class MainMenuPage extends StatelessWidget {
         context,
         MaterialPageRoute(builder: (context) => const NearbyFriendsPage()),
       );
+    } else if (value == 'logout') {
+      // Limpiar las credenciales del usuario y redirigir a la pantalla de bienvenida
+      Navigator.of(context).pushReplacementNamed('/welcome');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Selected: $value')),
