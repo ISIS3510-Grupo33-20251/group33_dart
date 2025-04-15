@@ -4,6 +4,13 @@ import 'dart:convert';
 
 import '../globals.dart';
 
+
+bool contieneEmojis(String texto) {
+  final regexEmoji = RegExp(r'^[\p{L}\p{N}\p{P}\p{Zs}]+$', unicode: true);
+
+  return !regexEmoji.hasMatch(texto);
+}
+
 class Note extends StatefulWidget {
   final String noteId;
   final String initialTitle;
@@ -146,107 +153,122 @@ class _NoteState extends State<Note> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Edit Note")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Campo de título
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(labelText: "Title"),
-            ),
-            SizedBox(height: 10),
-            // Campo de contenido
-            TextField(
-              controller: _contentController,
-              decoration: InputDecoration(labelText: "Content"),
-              maxLines: 5,
-            ),
-            SizedBox(height: 10),
-            // Dropdown para seleccionar o agregar un subject
-            DropdownButtonFormField<String>(
-              value: _subjectController.text.isNotEmpty
-                  ? _subjectController.text
-                  : null,
-              decoration: InputDecoration(labelText: "Subject"),
-              items: subjectOptions.map((subject) {
-                return DropdownMenuItem<String>(
-                  value: subject,
-                  child: Text(subject),
-                );
-              }).toList(),
-              onChanged: (value) async {
-                if (value == addNewOption) {
-                  // Mostrar diálogo para ingresar un nuevo subject
-                  final newSubject = await showDialog<String>(
-                    context: context,
-                    builder: (context) {
-                      final TextEditingController newSubjectController =
-                          TextEditingController();
-                      return AlertDialog(
-                        title: Text("New Subject"),
-                        content: TextField(
-                          controller: newSubjectController,
-                          decoration: InputDecoration(
-                            labelText: "Type new subject",
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: Text("Cancel"),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(
-                                  context, newSubjectController.text);
-                            },
-                            child: Text("Add"),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                  if (newSubject != null && newSubject.isNotEmpty) {
-                    setState(() {
-                      _subjectController.text = newSubject;
-                    });
-                  }
-                } else {
-                  setState(() {
-                    _subjectController.text = value ?? "";
-                  });
-                }
-              },
-            ),
-            SizedBox(height: 20),
-            // Botón para guardar (crear o actualizar)
-            ElevatedButton(
-              onPressed: () {
-                if (widget.noteId.isEmpty) {
-                  createNote();
-                } else {
-                  updateNote();
-                }
-              },
-              child: Text("Save"),
-            ),
-          ],
+  appBar: AppBar(title: Text("Edit Note")),
+  body: SingleChildScrollView(
+    padding: const EdgeInsets.all(16.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Campo de título
+        TextField(
+          controller: _titleController,
+          decoration: InputDecoration(labelText: "Title"),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          if (widget.noteId.isNotEmpty) {
-            deleteNote();
-          } else {
-            Navigator.pop(context);
-          }
-        },
-        child: Icon(Icons.delete),
-      ),
-    );
+        SizedBox(height: 10),
+        // Campo de contenido
+        TextField(
+          controller: _contentController,
+          decoration: InputDecoration(labelText: "Content"),
+          maxLines: 5,
+        ),
+        SizedBox(height: 10),
+        // Dropdown para seleccionar o agregar un subject
+        DropdownButtonFormField<String>(
+          value: _subjectController.text.isNotEmpty
+              ? _subjectController.text
+              : null,
+          decoration: InputDecoration(labelText: "Subject"),
+          items: subjectOptions.map((subject) {
+            return DropdownMenuItem<String>(
+              value: subject,
+              child: Text(subject),
+            );
+          }).toList(),
+          onChanged: (value) async {
+            if (value == addNewOption) {
+              // Mostrar diálogo para ingresar un nuevo subject
+              final newSubject = await showDialog<String>(
+                context: context,
+                builder: (context) {
+                  final TextEditingController newSubjectController =
+                      TextEditingController();
+                  return AlertDialog(
+                    title: Text("New Subject"),
+                    content: TextField(
+                      controller: newSubjectController,
+                      decoration: InputDecoration(
+                        labelText: "Type new subject",
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text("Cancel"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context, newSubjectController.text);
+                        },
+                        child: Text("Add"),
+                      ),
+                    ],
+                  );
+                },
+              );
+              if (newSubject != null && newSubject.isNotEmpty) {
+                setState(() {
+                  _subjectController.text = newSubject;
+                });
+              }
+            } else {
+              setState(() {
+                _subjectController.text = value ?? "";
+              });
+            }
+          },
+        ),
+        SizedBox(height: 20),
+        // Botón para guardar (crear o actualizar)
+        ElevatedButton(
+          onPressed: () {
+            if(_titleController.text.isEmpty ||
+               _contentController.text.isEmpty ||
+               _subjectController.text.isEmpty ||
+               contieneEmojis(_titleController.text) ||
+               contieneEmojis(_contentController.text) ||
+               contieneEmojis(_subjectController.text)
+            ){
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Emojis nor blank inputs are permited!'),
+                ),
+              );
+            } else {
+              if (widget.noteId.isEmpty) {
+                createNote();
+              } else {
+                updateNote();
+              }
+            }
+          },
+          child: Text("Save"),
+        ),
+      ],
+    ),
+  ),
+  floatingActionButton: FloatingActionButton(
+    onPressed: () {
+      if (widget.noteId.isNotEmpty) {
+        deleteNote();
+      } else {
+        Navigator.pop(context);
+      }
+    },
+    child: Icon(Icons.delete),
+  ),
+);
+
   }
 }

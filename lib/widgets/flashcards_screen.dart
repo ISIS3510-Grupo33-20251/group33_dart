@@ -12,12 +12,13 @@ class FlashcardsScreen extends StatefulWidget {
   @override
   _FlashcardsScreenState createState() => _FlashcardsScreenState();
 }
+
 class _FlashcardsScreenState extends State<FlashcardsScreen> {
   late Future<List<Map<String, dynamic>>> futureFlashcards;
   bool isPracticeMode = false;
   int currentCardIndex = 0;
   bool isFlipped = false;
-  bool isAnimating = false; // Nueva variable para controlar la animación
+  bool isAnimating = false; // Variable para controlar la animación
 
   @override
   void initState() {
@@ -50,12 +51,10 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
 
   void flipCard() {
     // Inicia la animación: se muestra texto vacío mientras gira.
-    
-    // A la mitad de la animación (150ms de 300ms) se invierte la cara.
     Future.delayed(Duration(milliseconds: 150), () {
       setState(() {
-      isAnimating = true;
-    });
+        isAnimating = true;
+      });
       setState(() {
         isFlipped = !isFlipped;
       });
@@ -74,7 +73,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
       setState(() {
         isPracticeMode = false;
       });
-      return false; // No permitir pop (retroceso) del Navigator.
+      return false; // No permitir pop.
     }
     return true; // Permitir pop si ya estamos en modo preview.
   }
@@ -98,7 +97,19 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
 
             final flashcards = snapshot.data!;
 
-            // Modo Preview: muestra todas las flashcards en una lista y un botón para practicar.
+            // Si la longitud de flashcards es 0, muestra un aviso y cierra la vista.
+            if (flashcards.isEmpty) {
+              // Utilizamos addPostFrameCallback para evitar problemas con el ciclo de vida del widget.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("There is not enough information to create flashcards for this subject :("))
+                );
+                Navigator.pop(context);
+              });
+              // Retornamos un Container vacío mientras se cierra la vista.
+              return Container();
+            }
+
             if (!isPracticeMode) {
               return Column(
                 children: [
@@ -138,7 +149,6 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
                 ],
               );
             } else {
-              // Modo Practice: muestra una flashcard a la vez, con la posibilidad de girarla para ver la respuesta.
               final currentCard = flashcards[currentCardIndex];
               return Center(
                 child: Column(
@@ -171,7 +181,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
                           );
                         },
                         child: Container(
-                          key: ValueKey<bool>(isFlipped), // Clave única para animación
+                          key: ValueKey<bool>(isFlipped),
                           width: MediaQuery.of(context).size.width * 0.50,
                           height: MediaQuery.of(context).size.height * 0.5,
                           alignment: Alignment.center,
@@ -181,7 +191,6 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 5)],
                           ),
-                          // Aquí se muestra el texto vacío si se está animando.
                           child: Text(
                             isAnimating ? '' : (isFlipped ? currentCard['answer'] : currentCard['question']),
                             textAlign: TextAlign.center,
@@ -191,20 +200,22 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
                       ),
                     ),
                     SizedBox(height: 20),
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      ElevatedButton(
-                      onPressed: () => prevCard(flashcards),
-                      child: Text("Prev"),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => prevCard(flashcards),
+                          child: Text("Prev"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => nextCard(flashcards),
+                          child: Text("Next"),
+                        ),
+                      ],
                     ),
-                    ElevatedButton(
-                      onPressed: () => nextCard(flashcards),
-                      child: Text("Next"),
-                    ),
-                    ],),
                     SizedBox(height: 10),
                     ElevatedButton(
                       onPressed: () {
-                        // Vuelve al modo Preview sin salir de la pantalla
                         setState(() {
                           isPracticeMode = false;
                         });
