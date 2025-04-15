@@ -202,25 +202,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         MediaQuery.of(context).padding.bottom,
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Back button
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back_ios),
-                          color: Colors.grey[800],
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // Logo
                       Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Text(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_ios),
+                              color: Colors.grey[800],
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
                             "Uni",
                             style: TextStyle(
                               fontSize: 64,
@@ -228,7 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               fontFamily: 'SmoochSans',
                             ),
                           ),
-                          Text(
+                          const Text(
                             "Verse",
                             style: TextStyle(
                               fontSize: 64,
@@ -237,133 +235,138 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               fontFamily: 'SmoochSans',
                             ),
                           ),
-                          SizedBox(height: 40),
-                          // Logo image
-                          Image(
+                          const SizedBox(height: 40),
+                          const Image(
                             image: AssetImage('assets/logos/logo.png'),
                             height: 120,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 40),
-                      // Register Fields
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Email",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[600],
-                              fontFamily: 'Montserrat',
-                            ),
-                          ),
-                          TextField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            style: const TextStyle(
-                              fontFamily: 'Montserrat',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
-                            ),
-                            decoration: InputDecoration(
-                              enabledBorder: UnderlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
-                              ),
-                              focusedBorder: const UnderlineInputBorder(
-                                borderSide: BorderSide(color: primaryColor),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            "Password",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[600],
-                              fontFamily: 'Montserrat',
-                            ),
-                          ),
-                          TextField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            style: const TextStyle(
-                              fontFamily: 'Montserrat',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
-                            ),
-                            decoration: InputDecoration(
-                              enabledBorder: UnderlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
-                              ),
-                              focusedBorder: const UnderlineInputBorder(
-                                borderSide: BorderSide(color: primaryColor),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            "Confirm Password",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[600],
-                              fontFamily: 'Montserrat',
-                            ),
-                          ),
-                          TextField(
-                            controller: _confirmPasswordController,
-                            obscureText: true,
-                            style: const TextStyle(
-                              fontFamily: 'Montserrat',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
-                            ),
-                            decoration: InputDecoration(
-                              enabledBorder: UnderlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
-                              ),
-                              focusedBorder: const UnderlineInputBorder(
-                                borderSide: BorderSide(color: primaryColor),
-                              ),
-                            ),
-                          ),
-                          Text(
-                            _passwordMatchMessage,
-                            style: TextStyle(
-                              color: _passwordMatchMessage == 'Passwords match'
-                                  ? Colors.green
-                                  : Colors.red,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-                          // Register Button
-                          ElevatedButton(
-                            onPressed: _register,
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              backgroundColor: primaryColor,
-                            ),
-                            child: const Text(
-                              "Sign up",
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                            vertical:
+                                MediaQuery.of(context).size.height * 0.05),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Email",
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
+                                color: Colors.grey[600],
                                 fontFamily: 'Montserrat',
                               ),
                             ),
+                            TextField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              style: const TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
+                              decoration: InputDecoration(
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: const UnderlineInputBorder(
+                                  borderSide: BorderSide(color: primaryColor),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              "Password",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[600],
+                                fontFamily: 'Montserrat',
+                              ),
+                            ),
+                            TextField(
+                              controller: _passwordController,
+                              obscureText: true,
+                              style: const TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
+                              decoration: InputDecoration(
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: const UnderlineInputBorder(
+                                  borderSide: BorderSide(color: primaryColor),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              "Confirm Password",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[600],
+                                fontFamily: 'Montserrat',
+                              ),
+                            ),
+                            TextField(
+                              controller: _confirmPasswordController,
+                              obscureText: true,
+                              style: const TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
+                              decoration: InputDecoration(
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide:
+                                      BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: const UnderlineInputBorder(
+                                  borderSide: BorderSide(color: primaryColor),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              _passwordMatchMessage,
+                              style: TextStyle(
+                                color:
+                                    _passwordMatchMessage == 'Passwords match'
+                                        ? Colors.green
+                                        : Colors.red,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).size.height * 0.05),
+                        child: ElevatedButton(
+                          onPressed: _register,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            backgroundColor: primaryColor,
                           ),
-                          const SizedBox(height: 20),
-                        ],
+                          child: const Text(
+                            "Sign up",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Montserrat',
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
