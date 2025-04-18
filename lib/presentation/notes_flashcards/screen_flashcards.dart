@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import './widgets/flashcards_screen.dart';
+import '../../widgets/flashcards_screen.dart';
 
 class ScreenFlashcard extends StatelessWidget {
   const ScreenFlashcard({Key? key}) : super(key: key);
@@ -47,7 +47,8 @@ class ScreenFlashcard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => FlashcardsScreen(subject: subject),
+                          builder: (context) =>
+                              FlashcardsScreen(subject: subject),
                         ),
                       );
                     },

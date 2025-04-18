@@ -1,9 +1,10 @@
 // Archivo: flashcards_screen.dart
 
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../globals.dart'; 
+import 'package:group33_dart/network/internet.dart';
+import 'package:group33_dart/services/api_service_adapter.dart';
+import 'package:group33_dart/services/local_storage_service.dart';
+import '../globals.dart';
 
 class FlashcardsScreen extends StatefulWidget {
   final String subject;
@@ -19,6 +20,9 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
   int currentCardIndex = 0;
   bool isFlipped = false;
   bool isAnimating = false; // Variable para controlar la animación
+  final ApiServiceAdapter apiServiceAdapter =
+      ApiServiceAdapter(backendUrl: backendUrl);
+  final LocalStorageService _localStorage = LocalStorageService();
 
   @override
   void initState() {
@@ -27,11 +31,18 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
   }
 
   Future<List<Map<String, dynamic>>> fetchFlashcards() async {
-    final response = await http.get(Uri.parse("$backendUrl/users/$userId/${widget.subject}/flash/"));
-    if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(json.decode(response.body));
+    final hasConnection = await checkInternetConnection();
+    if (hasConnection) {
+      try {
+        final online =
+            await apiServiceAdapter.fetchFlashcards(userId, widget.subject);
+        await _localStorage.saveFlashcards(widget.subject, online);
+        return online;
+      } catch (e) {
+        return _localStorage.loadFlashcards(widget.subject);
+      }
     } else {
-      throw Exception("Error");
+      return _localStorage.loadFlashcards(widget.subject);
     }
   }
 
@@ -101,9 +112,9 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
             if (flashcards.isEmpty) {
               // Utilizamos addPostFrameCallback para evitar problemas con el ciclo de vida del widget.
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("There is not enough information to create flashcards for this subject :("))
-                );
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(
+                        "Not wifi or there is not enough information to create flashcards for this subject :(")));
                 Navigator.pop(context);
               });
               // Retornamos un Container vacío mientras se cierra la vista.
@@ -159,8 +170,10 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
                       onTap: flipCard,
                       child: AnimatedSwitcher(
                         duration: Duration(milliseconds: 200),
-                        transitionBuilder: (Widget child, Animation<double> animation) {
-                          final rotate = Tween(begin: 0.0, end: 3.14).animate(animation);
+                        transitionBuilder:
+                            (Widget child, Animation<double> animation) {
+                          final rotate =
+                              Tween(begin: 0.0, end: 3.14).animate(animation);
                           return AnimatedBuilder(
                             animation: rotate,
                             builder: (context, child) {
@@ -189,10 +202,16 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(10),
-                            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 5)],
+                            boxShadow: [
+                              BoxShadow(color: Colors.black26, blurRadius: 5)
+                            ],
                           ),
                           child: Text(
-                            isAnimating ? '' : (isFlipped ? currentCard['answer'] : currentCard['question']),
+                            isAnimating
+                                ? ''
+                                : (isFlipped
+                                    ? currentCard['answer']
+                                    : currentCard['question']),
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 20),
                           ),

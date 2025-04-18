@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group33_dart/network/internet.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
 
 import '../globals.dart';
@@ -207,7 +208,18 @@ class _NoteState extends State<Note> {
             SizedBox(height: 20),
             // Botón para guardar (crear o actualizar)
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                var isWifi = await checkInternetConnection();
+                if (!isWifi) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Not wifi connection, cannot save the note yet.'),
+                    ),
+                  );
+                  return;
+                }
+
                 if (_titleController.text.trim().isEmpty ||
                     _contentController.text.trim().isEmpty ||
                     _subjectController.text.trim().isEmpty ||
@@ -216,7 +228,7 @@ class _NoteState extends State<Note> {
                     contieneEmojis(_subjectController.text.trim())) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('No se permiten emojis ni campos vacíos!'),
+                      content: Text('Not emojis nor blank spaces are permited'),
                     ),
                   );
                 } else {
@@ -233,7 +245,18 @@ class _NoteState extends State<Note> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
+          var isWifi = await checkInternetConnection();
+          if (!isWifi) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('Not wifi connection, cannot delete the note yet.'),
+              ),
+            );
+            return;
+          }
+
           if (widget.noteId.isNotEmpty) {
             deleteNote();
           } else {
