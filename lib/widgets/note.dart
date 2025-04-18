@@ -217,10 +217,13 @@ class _NoteState extends State<Note> {
                   );
                 },
               );
-              if (newSubject != null && newSubject.isNotEmpty) {
+              if (newSubject != null && newSubject.trim().isNotEmpty) {
                 setState(() {
-                  _subjectController.text = newSubject;
+                  _subjectController.text = newSubject.trim();
                 });
+              }
+              else{
+                _subjectController.text = "";
               }
             } else {
               setState(() {
@@ -233,16 +236,16 @@ class _NoteState extends State<Note> {
         // Botón para guardar (crear o actualizar)
         ElevatedButton(
           onPressed: () {
-            if(_titleController.text.isEmpty ||
-               _contentController.text.isEmpty ||
-               _subjectController.text.isEmpty ||
-               contieneEmojis(_titleController.text) ||
-               contieneEmojis(_contentController.text) ||
-               contieneEmojis(_subjectController.text)
+            if(_titleController.text.trim().isEmpty ||
+               _contentController.text.trim().isEmpty ||
+               _subjectController.text.trim().isEmpty ||
+               contieneEmojis(_titleController.text.trim()) ||
+               contieneEmojis(_contentController.text.trim()) ||
+               contieneEmojis(_subjectController.text.trim())
             ){
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Emojis nor blank inputs are permited!'),
+                  content: Text('Not emojis nor blank inputs are permited!'),
                 ),
               );
             } else {
