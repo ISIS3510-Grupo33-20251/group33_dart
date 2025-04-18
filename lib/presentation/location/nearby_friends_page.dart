@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'widgets/friend.dart';
-import 'widgets/friend_list.dart';
-import 'globals.dart';
+import '../widgets/friends/friend.dart';
+import '../widgets/friends/friend_list.dart';
+import '../../globals.dart';
 
 class NearbyFriendsPage extends StatefulWidget {
   const NearbyFriendsPage({Key? key}) : super(key: key);

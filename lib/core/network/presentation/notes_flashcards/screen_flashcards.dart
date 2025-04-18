@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../widgets/flashcards_screen.dart';
+import '../../../../presentation/widgets/flashcards/flashcards_screen.dart';
 
 class ScreenFlashcard extends StatelessWidget {
   const ScreenFlashcard({Key? key}) : super(key: key);
