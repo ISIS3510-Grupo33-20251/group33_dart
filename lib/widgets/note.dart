@@ -11,6 +11,11 @@ bool contieneEmojis(String texto) {
   return !regexEmoji.hasMatch(texto);
 }
 
+String normalizarSaltos(String texto) {
+  return texto.replaceAll(RegExp(r'\n+'), '\n');
+}
+
+
 
 class Note extends StatefulWidget {
   final String noteId;
@@ -55,7 +60,7 @@ class _NoteState extends State<Note> {
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "title": _titleController.text.trim(),
-        "content": _contentController.text.trim(),
+        "content": normalizarSaltos(_contentController.text),
         "subject": _subjectController.text.trim(),
         "created_date": widget.created_date,
         "last_modified": widget.last_modified,
@@ -78,7 +83,7 @@ class _NoteState extends State<Note> {
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "title": _titleController.text.trim(),
-        "content": _contentController.text.trim(),
+        "content": normalizarSaltos(_contentController.text),
         "subject": _subjectController.text.trim(),
         "created_date": '2024-03-07T12:00:00Z',
         "last_modified": '2024-03-07T12:00:00Z',
