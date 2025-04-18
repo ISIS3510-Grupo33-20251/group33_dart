@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:group33_dart/network/internet.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
+import 'package:group33_dart/services/local_storage_service.dart';
 import 'package:group33_dart/widgets/list_notes.dart';
-import '../globals.dart';
-import 'widgets/note.dart';
+import '../../../globals.dart';
+import '../../widgets/note.dart';
 
 class ScreenNotes extends StatefulWidget {
   const ScreenNotes({super.key});
@@ -16,7 +18,8 @@ class _ScreenNotesState extends State<ScreenNotes> {
   String? _selectedSubject; // null significa sin filtro (todas las notas)
   List<Map<String, dynamic>> _allNotes = [];
   final ApiServiceAdapter apiServiceAdapter =
-      ApiServiceAdapter(backendUrl: backendUrl); // Instanciamos el adaptador
+      ApiServiceAdapter(backendUrl: backendUrl);
+  final LocalStorageService _localStorage = LocalStorageService();
 
   @override
   void initState() {
@@ -25,7 +28,20 @@ class _ScreenNotesState extends State<ScreenNotes> {
   }
 
   Future<List<Map<String, dynamic>>> fetchNotes() async {
-    return await apiServiceAdapter.fetchNotes('users/$userId/notes/');
+    final hasConnection = await checkInternetConnection();
+
+    if (hasConnection) {
+      try {
+        final onlineNotes =
+            await apiServiceAdapter.fetchNotes('users/$userId/notes/');
+        await _localStorage.saveNotes(onlineNotes);
+        return onlineNotes;
+      } catch (e) {
+        return _localStorage.loadNotes();
+      }
+    } else {
+      return _localStorage.loadNotes();
+    }
   }
 
   // Función auxiliar para calcular el número de notas filtradas.
@@ -198,7 +214,17 @@ class _ScreenNotesState extends State<ScreenNotes> {
       ),
       // Botón flotante existente en la esquina inferior derecha para agregar una nueva nota.
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
+          final hasConnection = await checkInternetConnection();
+          if (!hasConnection) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('Not wifi connection, cannot create the note yet.'),
+              ),
+            );
+            return;
+          }
           Navigator.push(
             context,
             MaterialPageRoute(

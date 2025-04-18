@@ -4,8 +4,8 @@ import 'presentation/auth/login_screen.dart';
 import 'presentation/auth/register_screen.dart';
 import 'presentation/auth/welcome_screen.dart';
 import 'presentation/home/home_screen.dart';
-import 'screen_flashcards.dart';
-import 'screen_notes.dart';
+import 'presentation/notes_flashcards/screen_flashcards.dart';
+import 'presentation/notes_flashcards/screen_notes.dart';
 
 void main() {
   runApp(const MyApp());
@@ -43,4 +43,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-

@@ -88,4 +88,15 @@ class ApiServiceAdapter {
       throw Exception("Error deleting note");
     }
   }
+
+  Future<List<Map<String, dynamic>>> fetchFlashcards(
+      String userId, String subject) async {
+    final response =
+        await http.get(Uri.parse("$backendUrl/users/$userId/$subject/flash/"));
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(json.decode(response.body));
+    } else {
+      throw Exception("Error");
+    }
+  }
 }
