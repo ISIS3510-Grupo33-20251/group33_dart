@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:group33_dart/services/api_service_adapter.dart';
 import 'package:group33_dart/widgets/list_notes.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../globals.dart';
 import 'widgets/note.dart';
 
@@ -13,10 +12,11 @@ class ScreenNotes extends StatefulWidget {
 }
 
 class _ScreenNotesState extends State<ScreenNotes> {
-  
   late Future<List<Map<String, dynamic>>> futureNotes;
   String? _selectedSubject; // null significa sin filtro (todas las notas)
   List<Map<String, dynamic>> _allNotes = [];
+  final ApiServiceAdapter apiServiceAdapter =
+      ApiServiceAdapter(backendUrl: backendUrl); // Instanciamos el adaptador
 
   @override
   void initState() {
@@ -25,13 +25,7 @@ class _ScreenNotesState extends State<ScreenNotes> {
   }
 
   Future<List<Map<String, dynamic>>> fetchNotes() async {
-    final response = await http.get(Uri.parse("$backendUrl/users/$userId/notes/"));
-
-    if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(json.decode(response.body));
-    } else {
-      throw Exception("Error");
-    }
+    return await apiServiceAdapter.fetchNotes('users/$userId/notes/');
   }
 
   // Función auxiliar para calcular el número de notas filtradas.
@@ -45,7 +39,8 @@ class _ScreenNotesState extends State<ScreenNotes> {
     return Scaffold(
       // AppBar customizado con título, cantidad de notas y menú debajo.
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(220), // Aumentamos la altura para acomodar el menú
+        preferredSize:
+            Size.fromHeight(220), // Aumentamos la altura para acomodar el menú
         child: FutureBuilder<List<Map<String, dynamic>>>(
           future: futureNotes,
           builder: (context, snapshot) {
@@ -164,7 +159,9 @@ class _ScreenNotesState extends State<ScreenNotes> {
           // Aplicamos el filtrado si se ha seleccionado alguna asignatura.
           List<Map<String, dynamic>> notes = snapshot.data!;
           if (_selectedSubject != null) {
-            notes = notes.where((note) => note['subject'] == _selectedSubject).toList();
+            notes = notes
+                .where((note) => note['subject'] == _selectedSubject)
+                .toList();
           }
           return Stack(
             children: [
@@ -180,15 +177,15 @@ class _ScreenNotesState extends State<ScreenNotes> {
               // Botón adicional en la esquina inferior izquierda.
               Positioned(
                 bottom: 16, // margen inferior
-                left: 16,   // margen izquierdo
+                left: 16, // margen izquierdo
                 child: FloatingActionButton(
                   onPressed: () {
                     // Navega a la ruta '/flashcards' pasando las notas filtradas.
                     Navigator.pushNamed(
                       context,
                       '/flashcards',
-                      arguments:{
-                        'notes':  _allNotes,
+                      arguments: {
+                        'notes': _allNotes,
                       },
                     );
                   },
@@ -212,7 +209,6 @@ class _ScreenNotesState extends State<ScreenNotes> {
                 initialSubject: '',
                 created_date: '',
                 last_modified: '',
-
                 notes: _allNotes,
               ),
             ),

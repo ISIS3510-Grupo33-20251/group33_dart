@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:group33_dart/services/api_service_adapter.dart';
 
 import '../globals.dart';
-
 
 bool contieneEmojis(String texto) {
   final regexEmoji = RegExp(r'^[\p{L}\p{N}\p{P}\p{Zs}\n\r]+$', unicode: true);
@@ -15,7 +13,8 @@ String normalizarSaltos(String texto) {
   return texto.replaceAll(RegExp(r'\n+'), '\n');
 }
 
-
+final ApiServiceAdapter apiServiceAdapter =
+    ApiServiceAdapter(backendUrl: backendUrl);
 
 class Note extends StatefulWidget {
   final String noteId;
@@ -55,22 +54,18 @@ class _NoteState extends State<Note> {
   }
 
   Future<void> updateNote() async {
-    final response = await http.put(
-      Uri.parse("$backendUrl/notes/${widget.noteId}"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "title": _titleController.text.trim(),
-        "content": normalizarSaltos(_contentController.text),
-        "subject": _subjectController.text.trim(),
-        "created_date": widget.created_date,
-        "last_modified": widget.last_modified,
-        "owner_id": userId
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      Navigator.pop(context); // Cierra la pantalla después de guardar
-    } else {
+    try {
+      await apiServiceAdapter.updateNote(
+        widget.noteId,
+        _titleController.text,
+        normalizarSaltos(_contentController.text),
+        _subjectController.text,
+        widget.created_date,
+        widget.last_modified,
+        userId,
+      );
+      Navigator.pop(context); // Cierra la pantalla después de actualizar
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error al actualizar la nota")),
       );
@@ -78,54 +73,28 @@ class _NoteState extends State<Note> {
   }
 
   Future<void> createNote() async {
-    final response = await http.post(
-      Uri.parse("$backendUrl/notes/"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "title": _titleController.text.trim(),
-        "content": normalizarSaltos(_contentController.text),
-        "subject": _subjectController.text.trim(),
-        "created_date": '2024-03-07T12:00:00Z',
-        "last_modified": '2024-03-07T12:00:00Z',
-        "owner_id": userId
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final noteId = json.decode(response.body)["_id"];
-
-      final responseTags = await http.post(
-        Uri.parse("$backendUrl/users/$userId/notes/$noteId"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({}),
+    try {
+      await apiServiceAdapter.createNote(
+        _titleController.text,
+        normalizarSaltos(_contentController.text),
+        _subjectController.text,
+        userId,
       );
-
-      if (responseTags.statusCode == 200) {
-        Navigator.pop(context); // Cierra la pantalla después de ambas peticiones exitosas
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error")),
-        );
-      }
-    } else {
+      Navigator.pop(context); // Cierra la pantalla después de crear
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error")),
+        SnackBar(content: Text("Error al crear la nota")),
       );
     }
   }
 
   Future<void> deleteNote() async {
-    final response = await http.delete(
-      Uri.parse("$backendUrl/notes/${widget.noteId}"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({}),
-    );
-
-    if (response.statusCode == 200) {
+    try {
+      await apiServiceAdapter.deleteNote(widget.noteId);
       Navigator.pop(context);
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error")),
+        SnackBar(content: Text("Error al eliminar la nota")),
       );
     }
   }
@@ -141,10 +110,8 @@ class _NoteState extends State<Note> {
   @override
   Widget build(BuildContext context) {
     // Se obtiene la lista de subjects únicos a partir de widget.notes
-    final List<String> subjectOptions = widget.notes
-        .map((note) => note['subject'] as String)
-        .toSet()
-        .toList();
+    final List<String> subjectOptions =
+        widget.notes.map((note) => note['subject'] as String).toSet().toList();
 
     // Si el subject actual no está en la lista y no es vacío, se agrega
     if (_subjectController.text.isNotEmpty &&
@@ -159,125 +126,122 @@ class _NoteState extends State<Note> {
     }
 
     return Scaffold(
-  appBar: AppBar(title: Text("Edit Note")),
-  body: SingleChildScrollView(
-    padding: const EdgeInsets.all(16.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Campo de título
-        TextField(
-          controller: _titleController,
-          decoration: InputDecoration(labelText: "Title"),
-        ),
-        SizedBox(height: 10),
-        // Campo de contenido
-        TextField(
-          controller: _contentController,
-          decoration: InputDecoration(labelText: "Content"),
-          maxLines: 5,
-        ),
-        SizedBox(height: 10),
-        // Dropdown para seleccionar o agregar un subject
-        DropdownButtonFormField<String>(
-          value: _subjectController.text.isNotEmpty
-              ? _subjectController.text
-              : null,
-          decoration: InputDecoration(labelText: "Subject"),
-          items: subjectOptions.map((subject) {
-            return DropdownMenuItem<String>(
-              value: subject,
-              child: Text(subject),
-            );
-          }).toList(),
-          onChanged: (value) async {
-            if (value == addNewOption) {
-              // Mostrar diálogo para ingresar un nuevo subject
-              final newSubject = await showDialog<String>(
-                context: context,
-                builder: (context) {
-                  final TextEditingController newSubjectController =
-                      TextEditingController();
-                  return AlertDialog(
-                    title: Text("New Subject"),
-                    content: TextField(
-                      controller: newSubjectController,
-                      decoration: InputDecoration(
-                        labelText: "Type new subject",
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text("Cancel"),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context, newSubjectController.text);
-                        },
-                        child: Text("Add"),
-                      ),
-                    ],
+      appBar: AppBar(title: Text("Edit Note")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Campo de título
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(labelText: "Title"),
+            ),
+            SizedBox(height: 10),
+            // Campo de contenido
+            TextField(
+              controller: _contentController,
+              decoration: InputDecoration(labelText: "Content"),
+              maxLines: 5,
+            ),
+            SizedBox(height: 10),
+            // Dropdown para seleccionar o agregar un subject
+            DropdownButtonFormField<String>(
+              value: _subjectController.text.isNotEmpty
+                  ? _subjectController.text
+                  : null,
+              decoration: InputDecoration(labelText: "Subject"),
+              items: subjectOptions.map((subject) {
+                return DropdownMenuItem<String>(
+                  value: subject,
+                  child: Text(subject),
+                );
+              }).toList(),
+              onChanged: (value) async {
+                if (value == addNewOption) {
+                  // Mostrar diálogo para ingresar un nuevo subject
+                  final newSubject = await showDialog<String>(
+                    context: context,
+                    builder: (context) {
+                      final TextEditingController newSubjectController =
+                          TextEditingController();
+                      return AlertDialog(
+                        title: Text("New Subject"),
+                        content: TextField(
+                          controller: newSubjectController,
+                          decoration: InputDecoration(
+                            labelText: "Type new subject",
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text("Cancel"),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context, newSubjectController.text);
+                            },
+                            child: Text("Add"),
+                          ),
+                        ],
+                      );
+                    },
                   );
-                },
-              );
-              if (newSubject != null && newSubject.trim().isNotEmpty) {
-                setState(() {
-                  _subjectController.text = newSubject.trim();
-                });
-              }
-              else{
-                _subjectController.text = "";
-              }
-            } else {
-              setState(() {
-                _subjectController.text = value ?? "";
-              });
-            }
-          },
+                  if (newSubject != null && newSubject.trim().isNotEmpty) {
+                    setState(() {
+                      _subjectController.text = newSubject.trim();
+                    });
+                  } else {
+                    _subjectController.text = "";
+                  }
+                } else {
+                  setState(() {
+                    _subjectController.text = value ?? "";
+                  });
+                }
+              },
+            ),
+            SizedBox(height: 20),
+            // Botón para guardar (crear o actualizar)
+            ElevatedButton(
+              onPressed: () {
+                if (_titleController.text.trim().isEmpty ||
+                    _contentController.text.trim().isEmpty ||
+                    _subjectController.text.trim().isEmpty ||
+                    contieneEmojis(_titleController.text.trim()) ||
+                    contieneEmojis(_contentController.text.trim()) ||
+                    contieneEmojis(_subjectController.text.trim())) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('No se permiten emojis ni campos vacíos!'),
+                    ),
+                  );
+                } else {
+                  if (widget.noteId.isEmpty) {
+                    createNote();
+                  } else {
+                    updateNote();
+                  }
+                }
+              },
+              child: Text("Save"),
+            ),
+          ],
         ),
-        SizedBox(height: 20),
-        // Botón para guardar (crear o actualizar)
-        ElevatedButton(
-          onPressed: () {
-            if(_titleController.text.trim().isEmpty ||
-               _contentController.text.trim().isEmpty ||
-               _subjectController.text.trim().isEmpty ||
-               contieneEmojis(_titleController.text.trim()) ||
-               contieneEmojis(_contentController.text.trim()) ||
-               contieneEmojis(_subjectController.text.trim())
-            ){
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Not emojis nor blank inputs are permited!'),
-                ),
-              );
-            } else {
-              if (widget.noteId.isEmpty) {
-                createNote();
-              } else {
-                updateNote();
-              }
-            }
-          },
-          child: Text("Save"),
-        ),
-      ],
-    ),
-  ),
-  floatingActionButton: FloatingActionButton(
-    onPressed: () {
-      if (widget.noteId.isNotEmpty) {
-        deleteNote();
-      } else {
-        Navigator.pop(context);
-      }
-    },
-    child: Icon(Icons.delete),
-  ),
-);
-
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (widget.noteId.isNotEmpty) {
+            deleteNote();
+          } else {
+            Navigator.pop(context);
+          }
+        },
+        child: Icon(Icons.delete),
+      ),
+    );
   }
 }
