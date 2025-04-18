@@ -46,4 +46,4 @@ app.*.map.json
 
 
 # Android specific
-/android/app/
+/android/app/.cxx
