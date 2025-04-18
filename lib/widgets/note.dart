@@ -6,10 +6,11 @@ import '../globals.dart';
 
 
 bool contieneEmojis(String texto) {
-  final regexEmoji = RegExp(r'^[\p{L}\p{N}\p{P}\p{Zs}]+$', unicode: true);
+  final regexEmoji = RegExp(r'^[\p{L}\p{N}\p{P}\p{Zs}\n\r]+$', unicode: true);
 
   return !regexEmoji.hasMatch(texto);
 }
+
 
 class Note extends StatefulWidget {
   final String noteId;
@@ -53,9 +54,9 @@ class _NoteState extends State<Note> {
       Uri.parse("$backendUrl/notes/${widget.noteId}"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
-        "title": _titleController.text,
-        "content": _contentController.text,
-        "subject": _subjectController.text,
+        "title": _titleController.text.trim(),
+        "content": _contentController.text.trim(),
+        "subject": _subjectController.text.trim(),
         "created_date": widget.created_date,
         "last_modified": widget.last_modified,
         "owner_id": userId
@@ -76,9 +77,9 @@ class _NoteState extends State<Note> {
       Uri.parse("$backendUrl/notes/"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
-        "title": _titleController.text,
-        "content": _contentController.text,
-        "subject": _subjectController.text,
+        "title": _titleController.text.trim(),
+        "content": _contentController.text.trim(),
+        "subject": _subjectController.text.trim(),
         "created_date": '2024-03-07T12:00:00Z',
         "last_modified": '2024-03-07T12:00:00Z',
         "owner_id": userId
