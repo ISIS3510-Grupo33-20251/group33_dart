@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'nearby_friends_page.dart';
-import 'widgets/popup_menu.dart';
+import '../location/nearby_friends_page.dart';
+import '../widgets/menu/popup_menu.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});

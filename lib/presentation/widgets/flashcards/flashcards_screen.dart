@@ -1,10 +1,10 @@
 // Archivo: flashcards_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:group33_dart/network/internet.dart';
+import 'package:group33_dart/core/network/internet.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
-import 'package:group33_dart/services/local_storage_service.dart';
-import '../globals.dart';
+import 'package:group33_dart/data/sources/local/local_storage_service.dart';
+import '../../../globals.dart';
 
 class FlashcardsScreen extends StatefulWidget {
   final String subject;

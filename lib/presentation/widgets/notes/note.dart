@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:group33_dart/network/internet.dart';
+import 'package:group33_dart/core/network/internet.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
 
-import '../globals.dart';
+import '../../../globals.dart';
 
 bool contieneEmojis(String texto) {
   final regexEmoji = RegExp(r'^[\p{L}\p{N}\p{P}\p{Zs}\n\r]+$', unicode: true);
