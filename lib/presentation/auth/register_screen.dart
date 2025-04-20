@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
+import '../../services/api_service_adapter.dart';
 import 'package:group33_dart/globals.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -13,7 +13,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _authService = AuthService();
+  final _nameController = TextEditingController();
+  late final ApiServiceAdapter _apiService;
   bool _isLoading = false;
   String _passwordMatchMessage = '';
   static const Color primaryColor = Color(0xFF7D91FA);
@@ -21,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    _apiService = ApiServiceAdapter(backendUrl: backendUrl);
     // Agregar listeners para verificar las contraseñas en tiempo real
     _passwordController.addListener(_checkPasswords);
     _confirmPasswordController.addListener(_checkPasswords);
@@ -32,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -56,7 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_emailController.text.isEmpty ||
         _passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty) {
-      _showErrorSnackBar('Please fill all fields');
+      _showErrorSnackBar('Please fill all required fields');
       return;
     }
 
@@ -66,22 +69,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
             .hasMatch(email) ||
         email.contains(' ') ||
         email.contains(RegExp(r'[^\x00-\x7F]'))) {
-      // Verifica caracteres no ASCII
       _showErrorSnackBar(
           'Please enter a valid email without spaces or emojis.');
       return;
     }
 
+    // Validar el nombre si se proporcionó
+    String? name = _nameController.text.trim();
+    if (name.isNotEmpty && name.contains(' ')) {
+      _showErrorSnackBar('Name cannot contain spaces');
+      return;
+    }
+
     // Validar la contraseña
     String password = _passwordController.text;
-    if (password.trim().isEmpty || // Verifica que no sea solo espacios
+    if (password.trim().isEmpty ||
         password.contains(' ') ||
-        password.contains(RegExp(r'[\u{1F600}-\u{1F64F}]',
-            unicode: true)) || // Rango de emojis
-        password.contains(RegExp(r'[\u{1F300}-\u{1F5FF}]',
-            unicode: true)) || // Otro rango de emojis
+        password.contains(RegExp(r'[\u{1F600}-\u{1F64F}]', unicode: true)) ||
+        password.contains(RegExp(r'[\u{1F300}-\u{1F5FF}]', unicode: true)) ||
         password.length < 8) {
-      // Longitud mínima de 8 caracteres
       _showErrorSnackBar(
           'Password must be at least 8 characters long and cannot contain spaces or emojis.');
       return;
@@ -99,9 +105,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _authService.register(
+      final response = await _apiService.register(
         email,
         password,
+        name: name.isEmpty ? null : name,
       );
 
       userId = response["userId"];
@@ -111,7 +118,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       String errorMessage;
 
-      // Verifica si el error es específico
       if (e.toString().contains("email already exists") ||
           e.toString().contains("already registered")) {
         errorMessage = "The email is already registered, please try again.";
@@ -119,8 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         errorMessage =
             "Unable to connect to the server. Please check your internet connection.";
       } else {
-        errorMessage =
-            "An unexpected error occurred. Please try again."; // Mensaje genérico
+        errorMessage = "An unexpected error occurred. Please try again.";
       }
 
       _showErrorSnackBar(errorMessage);
@@ -165,13 +170,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Círculos decorativos
+          // Círculos decorativos con tamaño reducido
           Positioned(
-            right: -100,
-            top: -50,
+            right: -50,
+            top: -25,
             child: Container(
-              width: 300,
-              height: 300,
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
                 color: primaryColor.withOpacity(0.7),
                 shape: BoxShape.circle,
@@ -179,11 +184,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
           Positioned(
-            left: -70,
-            bottom: -100,
+            left: -35,
+            bottom: -50,
             child: Container(
-              width: 250,
-              height: 250,
+              width: 150,
+              height: 150,
               decoration: BoxDecoration(
                 color: const Color(0xFFA5B3FF).withOpacity(0.7),
                 shape: BoxShape.circle,
@@ -191,191 +196,172 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
           SafeArea(
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: MediaQuery.of(context).size.height -
-                        MediaQuery.of(context).padding.top -
-                        MediaQuery.of(context).padding.bottom,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  // Back button
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios),
+                      color: Colors.grey[800],
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: IconButton(
-                              icon: const Icon(Icons.arrow_back_ios),
-                              color: Colors.grey[800],
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                            ),
+                  // Logo and title section
+                  Flexible(
+                    flex: 2,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          "Uni",
+                          style: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.w300,
+                            fontFamily: 'SmoochSans',
                           ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            "Uni",
-                            style: TextStyle(
-                              fontSize: 64,
-                              fontWeight: FontWeight.w300,
-                              fontFamily: 'SmoochSans',
-                            ),
+                        ),
+                        const Text(
+                          "Verse",
+                          style: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                            fontFamily: 'SmoochSans',
                           ),
-                          const Text(
-                            "Verse",
-                            style: TextStyle(
-                              fontSize: 64,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                              fontFamily: 'SmoochSans',
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-                          const Image(
-                            image: AssetImage('assets/logos/logo.png'),
-                            height: 120,
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                            vertical:
-                                MediaQuery.of(context).size.height * 0.05),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              "Email",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[600],
-                                fontFamily: 'Montserrat',
-                              ),
-                            ),
-                            TextField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              style: const TextStyle(
-                                fontFamily: 'Montserrat',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
-                              ),
-                              decoration: InputDecoration(
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide:
-                                      BorderSide(color: Colors.grey.shade300),
-                                ),
-                                focusedBorder: const UnderlineInputBorder(
-                                  borderSide: BorderSide(color: primaryColor),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              "Password",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[600],
-                                fontFamily: 'Montserrat',
-                              ),
-                            ),
-                            TextField(
-                              controller: _passwordController,
-                              obscureText: true,
-                              style: const TextStyle(
-                                fontFamily: 'Montserrat',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
-                              ),
-                              decoration: InputDecoration(
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide:
-                                      BorderSide(color: Colors.grey.shade300),
-                                ),
-                                focusedBorder: const UnderlineInputBorder(
-                                  borderSide: BorderSide(color: primaryColor),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              "Confirm Password",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[600],
-                                fontFamily: 'Montserrat',
-                              ),
-                            ),
-                            TextField(
-                              controller: _confirmPasswordController,
-                              obscureText: true,
-                              style: const TextStyle(
-                                fontFamily: 'Montserrat',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
-                              ),
-                              decoration: InputDecoration(
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide:
-                                      BorderSide(color: Colors.grey.shade300),
-                                ),
-                                focusedBorder: const UnderlineInputBorder(
-                                  borderSide: BorderSide(color: primaryColor),
-                                ),
-                              ),
-                            ),
-                            Text(
+                        ),
+                        const SizedBox(height: 10),
+                        const Image(
+                          image: AssetImage('assets/logos/logo.png'),
+                          height: 80,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Form section
+                  Flexible(
+                    flex: 4,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildInputField(
+                          "Name (Optional)",
+                          _nameController,
+                          false,
+                        ),
+                        buildInputField(
+                          "Email",
+                          _emailController,
+                          false,
+                        ),
+                        buildInputField(
+                          "Password",
+                          _passwordController,
+                          true,
+                        ),
+                        buildInputField(
+                          "Confirm Password",
+                          _confirmPasswordController,
+                          true,
+                        ),
+                        if (_passwordMatchMessage.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
                               _passwordMatchMessage,
                               style: TextStyle(
                                 color:
                                     _passwordMatchMessage == 'Passwords match'
                                         ? Colors.green
                                         : Colors.red,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).size.height * 0.05),
-                        child: ElevatedButton(
-                          onPressed: _register,
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            backgroundColor: primaryColor,
                           ),
-                          child: const Text(
-                            "Sign up",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Montserrat',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                  // Button section
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _register,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 45),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        backgroundColor: primaryColor,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              "Sign up",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Montserrat',
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget buildInputField(
+    String label,
+    TextEditingController controller,
+    bool isPassword,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+            fontFamily: 'Montserrat',
+          ),
+        ),
+        TextField(
+          controller: controller,
+          obscureText: isPassword,
+          style: const TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: primaryColor),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
