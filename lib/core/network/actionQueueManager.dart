@@ -24,18 +24,25 @@ class ActionQueueManager {
 
   /// Initialize the queue manager: perform an immediate check and start monitoring
   Future<void> init() async {
-    // Immediately check connection and process pending actions
+    while (userId == '1') {
+      await Future.delayed(Duration(
+          seconds: 1)); // Espera 1 segundo antes de comprobar nuevamente
+    }
+    dispose();
     await _checkConnection();
-    // Then start periodic monitoring
-    _startMonitoring();
+    print('Manager inicializado');
+    await _startMonitoring();
   }
 
-  void _startMonitoring() {
+  Future<void> _startMonitoring() async {
+    await Future.delayed(const Duration(milliseconds: 100));
     _timer =
         Timer.periodic(const Duration(seconds: 5), (_) => _checkConnection());
   }
 
   Future<void> _checkConnection() async {
+    print(await _localStorage.loadActionQueue());
+    print(await _localStorage.loadNotes());
     try {
       final result = await checkInternetConnection();
       if (result) {
@@ -144,5 +151,6 @@ class ActionQueueManager {
   /// Clean up timer
   void dispose() {
     _timer?.cancel();
+    _timer = null;
   }
 }

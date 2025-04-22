@@ -12,7 +12,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await Hive.openBox('storage');
-  await ActionQueueManager().init();
+  ActionQueueManager().init();
   runApp(const MyApp());
 }
 

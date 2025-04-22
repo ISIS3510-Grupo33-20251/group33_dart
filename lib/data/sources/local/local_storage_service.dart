@@ -9,6 +9,12 @@ class LocalStorageService {
 
   Box get _box => Hive.box('storage');
 
+  Future<void> ensureBoxIsOpen() async {
+    if (!Hive.isBoxOpen('storage')) {
+      await Hive.openBox('storage'); // Abre el box si no está abierto
+    }
+  }
+
   Future<void> saveActionQueue(List<Map<String, String>> actionQueue) async {
     final jsonQueue = jsonEncode(actionQueue);
     await _box.put(_actionQueueKey, jsonQueue);
@@ -16,6 +22,7 @@ class LocalStorageService {
   }
 
   Future<List<Map<String, String>>> loadActionQueue() async {
+    await ensureBoxIsOpen();
     final raw = _box.get(_actionQueueKey);
     if (raw == null) return [];
     final List<dynamic> decoded = jsonDecode(raw);
@@ -29,6 +36,7 @@ class LocalStorageService {
   }
 
   Future<List<Map<String, dynamic>>> loadNotes() async {
+    await ensureBoxIsOpen();
     final raw = _box.get(_notesKey);
     if (raw == null) return [];
     final List<dynamic> decoded = jsonDecode(raw);
@@ -87,6 +95,7 @@ class LocalStorageService {
   }
 
   Future<List<Map<String, dynamic>>> loadFlashcards(String subject) async {
+    await ensureBoxIsOpen();
     final allFlashcards = await loadAllFlashcards();
     return allFlashcards[subject] ?? [];
   }
