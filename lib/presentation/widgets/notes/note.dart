@@ -65,43 +65,13 @@ class _NoteState extends State<Note> {
       'content': normalizarSaltos(_contentController.text),
       'subject': _subjectController.text
     });
-    if (widget.noteId.contains('test')) {
-      ActionQueueManager().updateAction('cre ${widget.noteId}', () async {
-        await apiServiceAdapter.createNote(
-          _titleController.text,
-          normalizarSaltos(_contentController.text),
-          _subjectController.text,
-          userId,
-        );
-      });
-      return;
-    }
+    if (!widget.noteId.contains('test')) {
+      bool changed =
+          await ActionQueueManager().updateAction(widget.noteId, 'note update');
 
-    bool changed =
-        ActionQueueManager().updateAction('upd ${widget.noteId}', () async {
-      await apiServiceAdapter.updateNote(
-        widget.noteId,
-        _titleController.text,
-        normalizarSaltos(_contentController.text),
-        _subjectController.text,
-        widget.created_date,
-        widget.last_modified,
-        userId,
-      );
-    });
-
-    if (!changed) {
-      await ActionQueueManager().addAction('upd ${widget.noteId}', () async {
-        await apiServiceAdapter.updateNote(
-          widget.noteId,
-          _titleController.text,
-          normalizarSaltos(_contentController.text),
-          _subjectController.text,
-          widget.created_date,
-          widget.last_modified,
-          userId,
-        );
-      });
+      if (!changed) {
+        await ActionQueueManager().addAction(widget.noteId, 'note update');
+      }
     }
   }
 
@@ -118,21 +88,21 @@ class _NoteState extends State<Note> {
       'last_modified': DateTime.now().toIso8601String(),
     });
 
-    await ActionQueueManager().addAction('cre test${created.length}', () async {
-      await apiServiceAdapter.createNote(
-        _titleController.text,
-        normalizarSaltos(_contentController.text),
-        _subjectController.text,
-        userId,
-      );
-    });
+    await ActionQueueManager()
+        .addAction("test${created.length}", 'note create');
   }
 
   Future<void> deleteNote() async {
     _localStorage.deleteNoteById(widget.noteId);
-    await ActionQueueManager().addAction('del ${widget.noteId}', () async {
-      await apiServiceAdapter.deleteNote(widget.noteId);
-    });
+    if (widget.noteId.contains('test')) {
+      await ActionQueueManager().updateAction(widget.noteId, 'none');
+      return;
+    }
+    bool changed =
+        await ActionQueueManager().updateAction(widget.noteId, 'note delete');
+    if (!changed) {
+      await ActionQueueManager().addAction(widget.noteId, 'note delete');
+    }
   }
 
   @override

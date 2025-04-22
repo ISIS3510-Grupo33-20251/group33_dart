@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:group33_dart/core/network/actionQueueManager.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'presentation/menu/main_menu.dart';
 import 'presentation/auth/login_screen.dart';
 import 'presentation/auth/register_screen.dart';
@@ -7,15 +8,11 @@ import 'presentation/auth/welcome_screen.dart';
 import 'presentation/flashcards/screen_flashcards.dart';
 import 'presentation/notes/screen_notes.dart';
 
-import 'package:hive/hive.dart';
-import 'package:path_provider/path_provider.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final dir = await getApplicationDocumentsDirectory();
-  Hive.init(dir.path);
+  await Hive.initFlutter();
   await Hive.openBox('storage');
-  ActionQueueManager();
+  await ActionQueueManager().init();
   runApp(const MyApp());
 }
 
