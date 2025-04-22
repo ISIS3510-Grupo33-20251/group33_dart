@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:group33_dart/core/network/internet.dart';
+import 'package:group33_dart/core/network/actionQueueManager.dart';
+import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../globals.dart';
 
@@ -16,6 +18,8 @@ String normalizarSaltos(String texto) {
 
 final ApiServiceAdapter apiServiceAdapter =
     ApiServiceAdapter(backendUrl: backendUrl);
+final LocalStorageService _localStorage = LocalStorageService();
+final uuid = Uuid();
 
 class Note extends StatefulWidget {
   final String noteId;
@@ -55,7 +59,26 @@ class _NoteState extends State<Note> {
   }
 
   Future<void> updateNote() async {
-    try {
+    await _localStorage.updateNote({
+      '_id': widget.noteId,
+      'title': _titleController.text,
+      'content': normalizarSaltos(_contentController.text),
+      'subject': _subjectController.text
+    });
+    if (widget.noteId.contains('test')) {
+      ActionQueueManager().updateAction('cre ${widget.noteId}', () async {
+        await apiServiceAdapter.createNote(
+          _titleController.text,
+          normalizarSaltos(_contentController.text),
+          _subjectController.text,
+          userId,
+        );
+      });
+      return;
+    }
+
+    bool changed =
+        ActionQueueManager().updateAction('upd ${widget.noteId}', () async {
       await apiServiceAdapter.updateNote(
         widget.noteId,
         _titleController.text,
@@ -65,39 +88,51 @@ class _NoteState extends State<Note> {
         widget.last_modified,
         userId,
       );
-      Navigator.pop(context); // Cierra la pantalla después de actualizar
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al actualizar la nota")),
-      );
+    });
+
+    if (!changed) {
+      await ActionQueueManager().addAction('upd ${widget.noteId}', () async {
+        await apiServiceAdapter.updateNote(
+          widget.noteId,
+          _titleController.text,
+          normalizarSaltos(_contentController.text),
+          _subjectController.text,
+          widget.created_date,
+          widget.last_modified,
+          userId,
+        );
+      });
     }
   }
 
   Future<void> createNote() async {
-    try {
+    List<Map<String, dynamic>> created = await _localStorage.getCreated();
+    await _localStorage.createNote({
+      '_id': "test${created.length}",
+      'title': _titleController.text,
+      'content': normalizarSaltos(_contentController.text),
+      'subject': _subjectController.text,
+      'owner_id': userId,
+      'tags': [],
+      'created_date': DateTime.now().toIso8601String(),
+      'last_modified': DateTime.now().toIso8601String(),
+    });
+
+    await ActionQueueManager().addAction('cre test${created.length}', () async {
       await apiServiceAdapter.createNote(
         _titleController.text,
         normalizarSaltos(_contentController.text),
         _subjectController.text,
         userId,
       );
-      Navigator.pop(context); // Cierra la pantalla después de crear
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al crear la nota")),
-      );
-    }
+    });
   }
 
   Future<void> deleteNote() async {
-    try {
+    _localStorage.deleteNoteById(widget.noteId);
+    await ActionQueueManager().addAction('del ${widget.noteId}', () async {
       await apiServiceAdapter.deleteNote(widget.noteId);
-      Navigator.pop(context);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al eliminar la nota")),
-      );
-    }
+    });
   }
 
   @override
@@ -209,17 +244,6 @@ class _NoteState extends State<Note> {
             // Botón para guardar (crear o actualizar)
             ElevatedButton(
               onPressed: () async {
-                var isWifi = await checkInternetConnection();
-                if (!isWifi) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          'Not wifi connection, cannot save the note yet.'),
-                    ),
-                  );
-                  return;
-                }
-
                 if (_titleController.text.trim().isEmpty ||
                     _contentController.text.trim().isEmpty ||
                     _subjectController.text.trim().isEmpty ||
@@ -235,8 +259,18 @@ class _NoteState extends State<Note> {
                   if (widget.noteId.isEmpty) {
                     createNote();
                   } else {
-                    updateNote();
+                    if (widget.noteId.contains('loaded')) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              'This note cannot be deleted now, wifi is required'),
+                        ),
+                      );
+                      return;
+                    }
+                    await updateNote();
                   }
+                  Navigator.pop(context);
                 }
               },
               child: Text("Save"),
@@ -246,22 +280,10 @@ class _NoteState extends State<Note> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          var isWifi = await checkInternetConnection();
-          if (!isWifi) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content:
-                    Text('Not wifi connection, cannot delete the note yet.'),
-              ),
-            );
-            return;
-          }
-
           if (widget.noteId.isNotEmpty) {
             deleteNote();
-          } else {
-            Navigator.pop(context);
           }
+          Navigator.pop(context);
         },
         child: Icon(Icons.delete),
       ),
