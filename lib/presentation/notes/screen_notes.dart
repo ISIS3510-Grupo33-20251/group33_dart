@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group33_dart/core/network/actionQueueManager.dart';
 import 'package:group33_dart/core/network/internet.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
 import 'package:group33_dart/data/sources/local/local_storage_service.dart';
@@ -28,19 +29,21 @@ class _ScreenNotesState extends State<ScreenNotes> {
   }
 
   Future<List<Map<String, dynamic>>> fetchNotes() async {
-    final hasConnection = await checkInternetConnection();
+    while (true) {
+      final hasConnection = await checkInternetConnection();
 
-    if (hasConnection) {
+      if (!hasConnection) {
+        return _localStorage.loadNotes();
+      }
       try {
+        await ActionQueueManager().waitForEmptyQueue();
         final onlineNotes =
             await apiServiceAdapter.fetchNotes('users/$userId/notes/');
         await _localStorage.saveNotes(onlineNotes);
         return onlineNotes;
       } catch (e) {
-        return _localStorage.loadNotes();
+        await Future.delayed(Duration(seconds: 1));
       }
-    } else {
-      return _localStorage.loadNotes();
     }
   }
 
@@ -214,17 +217,7 @@ class _ScreenNotesState extends State<ScreenNotes> {
       ),
       // Botón flotante existente en la esquina inferior derecha para agregar una nueva nota.
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final hasConnection = await checkInternetConnection();
-          if (!hasConnection) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content:
-                    Text('Not wifi connection, cannot create the note yet.'),
-              ),
-            );
-            return;
-          }
+        onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
