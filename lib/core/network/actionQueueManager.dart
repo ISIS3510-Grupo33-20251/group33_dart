@@ -62,7 +62,7 @@ class ActionQueueManager {
   /// Add a new action to the queue
   Future<void> addAction(String id, String action) async {
     final queue = await _localStorage.loadActionQueue();
-    queue.add({'key': id, 'value': action});
+    queue.add({'key': id, 'value': action, 'attempts': '0'});
     await _localStorage.saveActionQueue(queue);
     if (_isConnected) {
       await _processQueue();
@@ -95,6 +95,14 @@ class ActionQueueManager {
           await actionCatalog(entry['key'] ?? '', entry['value'] ?? '');
         } catch (e) {
           print('Error while executing action: $e');
+          String attempts = entry['attempts'] ?? '0';
+          if (attempts == '0') {
+            entry['attempts'] = '1';
+            queue.add(entry);
+            await _localStorage.saveActionQueue(queue);
+          } else {
+            print('Descartando acción después de 2 intentos: ${entry['key']}');
+          }
         }
       }
     } finally {
@@ -107,9 +115,6 @@ class ActionQueueManager {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final endTime = DateTime.now().add(timeout);
-    print(await _localStorage.loadActionQueue());
-    print(await _localStorage.loadNotes());
-
     while (
         (await _localStorage.loadActionQueue()).isNotEmpty || _isProcessing) {
       if (DateTime.now().isAfter(endTime)) {

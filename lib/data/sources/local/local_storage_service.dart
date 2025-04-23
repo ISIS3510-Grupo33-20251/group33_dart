@@ -4,7 +4,6 @@ import 'package:group33_dart/globals.dart';
 
 class LocalStorageService {
   static const String _notesKey = 'cached_notes';
-  static const String _flashcardsKey = 'cached_flashcards';
   static const String _actionQueueKey = 'cached_queue';
 
   Box get _box => Hive.box('storage');
@@ -83,33 +82,5 @@ class LocalStorageService {
   Future<Map<String, dynamic>> getNote(String noteId) async {
     final notes = await loadNotes();
     return notes.firstWhere((note) => note['_id'] == noteId);
-  }
-
-  Future<void> saveFlashcards(
-      String subject, List<Map<String, dynamic>> flashcards) async {
-    final allFlashcards = await loadAllFlashcards();
-    allFlashcards[subject] = flashcards;
-    final jsonFlashcards = jsonEncode(allFlashcards);
-    await _box.put(_flashcardsKey, jsonFlashcards);
-    await _box.flush();
-  }
-
-  Future<List<Map<String, dynamic>>> loadFlashcards(String subject) async {
-    await ensureBoxIsOpen();
-    final allFlashcards = await loadAllFlashcards();
-    return allFlashcards[subject] ?? [];
-  }
-
-  Future<Map<String, List<Map<String, dynamic>>>> loadAllFlashcards() async {
-    final raw = _box.get(_flashcardsKey);
-    if (raw == null) return {};
-    final decoded = jsonDecode(raw) as Map<String, dynamic>;
-    final result = <String, List<Map<String, dynamic>>>{};
-
-    decoded.forEach((key, value) {
-      result[key] = List<Map<String, dynamic>>.from(value);
-    });
-
-    return result;
   }
 }
