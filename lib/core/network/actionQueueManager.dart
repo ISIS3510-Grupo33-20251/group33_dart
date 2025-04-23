@@ -41,8 +41,6 @@ class ActionQueueManager {
   }
 
   Future<void> _checkConnection() async {
-    print(await _localStorage.loadActionQueue());
-    print(await _localStorage.loadNotes());
     try {
       final result = await checkInternetConnection();
       if (result) {

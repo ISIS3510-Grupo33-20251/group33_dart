@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:group33_dart/core/network/actionQueueManager.dart';
 import 'package:group33_dart/core/network/internet.dart';
+import 'package:group33_dart/presentation/widgets/notes/notes_analysis.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
 import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:group33_dart/presentation/widgets/notes/list_notes.dart';
@@ -161,6 +162,34 @@ class _ScreenNotesState extends State<ScreenNotes> {
                     },
                   ),
                 ),
+                Positioned(
+                  top: 180,
+                  right: 10,
+                  child: IconButton(
+                    icon: Icon(Icons.pie_chart),
+                    onPressed: snapshot.hasData
+                        ? () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text("Notes distribution"),
+                                content: SizedBox(
+                                  height: 300,
+                                  width: double.maxFinite,
+                                  child: NotesAnalysis(notes: _allNotes),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: Text("Cerrar"),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        : null, // Desactiva el botón si las notas no están listas
+                  ),
+                )
               ],
             );
           },
