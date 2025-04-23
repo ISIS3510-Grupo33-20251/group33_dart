@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:group33_dart/core/network/internet.dart';
+import 'package:group33_dart/data/sources/local/cache_service.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
-import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import '../../../globals.dart';
 
 class FlashcardsScreen extends StatefulWidget {
@@ -22,7 +22,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
   bool isAnimating = false; // Variable para controlar la animación
   final ApiServiceAdapter apiServiceAdapter =
       ApiServiceAdapter(backendUrl: backendUrl);
-  final LocalStorageService _localStorage = LocalStorageService();
+  final cache = CacheService();
 
   @override
   void initState() {
@@ -36,13 +36,13 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> {
       try {
         final online =
             await apiServiceAdapter.fetchFlashcards(userId, widget.subject);
-        await _localStorage.saveFlashcards(widget.subject, online);
+        await cache.cacheFlashcard('flashcard ${widget.subject}', online);
         return online;
       } catch (e) {
-        return _localStorage.loadFlashcards(widget.subject);
+        return cache.loadCachedFlashcard('flashcard ${widget.subject}');
       }
     } else {
-      return _localStorage.loadFlashcards(widget.subject);
+      return cache.loadCachedFlashcard('flashcard ${widget.subject}');
     }
   }
 
