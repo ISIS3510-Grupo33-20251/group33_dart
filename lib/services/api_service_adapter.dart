@@ -177,4 +177,27 @@ class ApiServiceAdapter {
       throw Exception("Error");
     }
   }
+  Future<void> updateUserLocationHttp(String userId, double latitude, double longitude) async {
+  final url = Uri.parse('$backendUrl/users/$userId/location');
+  final response = await http.put(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
+  );
+  if (response.statusCode != 200) {
+    throw Exception('Failed to update location');
+  }
+}
+
+Future<List<dynamic>> fetchNearbyFriendsHttp(String userId) async {
+  final url = Uri.parse('$backendUrl/users/$userId/friends/location');
+  final response = await http.get(url);
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to fetch friends');
+  }
+}
+
 }

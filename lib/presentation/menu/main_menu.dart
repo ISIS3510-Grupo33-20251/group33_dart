@@ -33,7 +33,7 @@ class MainMenuPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('SEMESTER 1',
-                style: TextStyle(color: Colors.grey, fontSize: 12)),
+                style: TextStyle(color: Color.fromARGB(255, 81, 80, 80), fontSize: 12, fontWeight: FontWeight.bold)),
             Text('Schedule',
                 style: TextStyle(
                     fontSize: 24,
