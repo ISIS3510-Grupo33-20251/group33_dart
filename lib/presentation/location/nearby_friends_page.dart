@@ -1,10 +1,14 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 import '../widgets/friends/friend.dart';
 import '../widgets/friends/friend_list.dart';
 import '../../globals.dart';
+import 'package:group33_dart/data/sources/local/local_storage_service.dart';
+import 'package:group33_dart/services/api_service_adapter.dart';
+
+final ApiServiceAdapter apiServiceAdapter =
+    ApiServiceAdapter(backendUrl: backendUrl);
+final LocalStorageService_localStorage = LocalStorageService();
 
 class NearbyFriendsPage extends StatefulWidget {
   const NearbyFriendsPage({Key? key}) : super(key: key);
@@ -17,6 +21,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
   List<Friend> friends = [];
   bool isLoading = true;
   String error = '';
+  bool locationPermissionDenied = false;
 
   @override
   void initState() {
@@ -26,8 +31,22 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
 
   Future<void> _initialize() async {
     try {
-      Position position = await _getLocation();
-      await _updateUserLocation(position);
+      Position? position;
+      try {
+        position = await _getLocation();
+        if (position != null) {
+          await _updateUserLocation(position);
+        } else {
+          setState(() {
+            locationPermissionDenied = true;
+          });
+        }
+      } catch (e) {
+        setState(() {
+          locationPermissionDenied = true;
+        });
+      }
+
       await _fetchFriends(position);
     } catch (e) {
       setState(() {
@@ -37,52 +56,43 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
     }
   }
 
-  Future<Position> _getLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception('Location services are disabled.');
-    }
+  Future<Position?> _getLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        throw Exception('Location permissions are denied');
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return null;
       }
-    }
 
-    if (permission == LocationPermission.deniedForever) {
-      throw Exception('Location permissions are permanently denied');
-    }
+      if (permission == LocationPermission.deniedForever) return null;
 
-    return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _updateUserLocation(Position position) async {
-    final url = Uri.parse('$backendUrl/users/$userId/location');
-    final response = await http.put(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'latitude': position.latitude,
-        'longitude': position.longitude,
-      }),
+    await apiServiceAdapter.updateUserLocationHttp(
+      userId,
+      position.latitude,
+      position.longitude,
     );
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update location');
-    }
   }
 
-  Future<void> _fetchFriends(Position userPosition) async {
-    final url = Uri.parse('$backendUrl/users/$userId/friends/location');
-    final response = await http.get(url);
+  Future<void> _fetchFriends(Position? userPosition) async {
+    List<dynamic> data =
+        await apiServiceAdapter.fetchNearbyFriendsHttp(userId);
 
-    if (response.statusCode == 200) {
-      List data = jsonDecode(response.body);
-      List<Friend> fetchedFriends =
-          data.map((json) => Friend.fromJson(json)).toList();
+    List<Friend> fetchedFriends =
+        data.map((json) => Friend.fromJson(json)).toList();
 
+    if (userPosition != null) {
       for (var friend in fetchedFriends) {
         friend.distance = Geolocator.distanceBetween(
               userPosition.latitude,
@@ -90,18 +100,16 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
               friend.latitude,
               friend.longitude,
             ) /
-            1000; // to km
+            1000; // in km
       }
 
       fetchedFriends.sort((a, b) => a.distance.compareTo(b.distance));
-
-      setState(() {
-        friends = fetchedFriends;
-        isLoading = false;
-      });
-    } else {
-      throw Exception('Failed to fetch friends');
     }
+
+    setState(() {
+      friends = fetchedFriends;
+      isLoading = false;
+    });
   }
 
   @override
@@ -134,7 +142,24 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
           ),
         ],
       ),
-      body: FriendList(friends: friends),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : error.isNotEmpty
+              ? Center(child: Text(error))
+              : Column(
+                  children: [
+                    if (locationPermissionDenied)
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Text(
+                          'Location permission denied. Showing friends without distance.',
+                          style: TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    Expanded(child: FriendList(friends: friends)),
+                  ],
+                ),
     );
   }
 }
