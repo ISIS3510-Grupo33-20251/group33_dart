@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'friend.dart';
-
-class FriendCard extends StatelessWidget {
+import 'friend.dart';class FriendCard extends StatefulWidget {
   final Friend friend;
 
-  const FriendCard({super.key, required this.friend});
+  const FriendCard({Key? key, required this.friend}) : super(key: key);
 
+  @override
+  State<FriendCard> createState() => _FriendCardState();
+}
+
+class _FriendCardState extends State<FriendCard> {
   String formatDistance(double distanceInMeters) {
     if (distanceInMeters < 1000) {
       return '${distanceInMeters.toStringAsFixed(0)} m away';
@@ -28,17 +31,17 @@ class FriendCard extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: Colors.deepPurple.shade100,
           child: Text(
-            friend.name[0].toUpperCase(),
-            style: const TextStyle(color: Colors.black),
+            widget.friend.name[0].toUpperCase(),
+            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(
-          friend.name,
-          style: const TextStyle(fontSize: 16),
+          widget.friend.name,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(formatDistance(friend.distance)),
+        subtitle: Text(formatDistance(widget.friend.distance)),
         onTap: () {
-          // this works for viewing a friend's schedule
+          // Future feature: open friend's schedule
         },
       ),
     );

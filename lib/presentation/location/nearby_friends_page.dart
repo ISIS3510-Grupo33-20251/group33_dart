@@ -87,8 +87,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
   }
 
   Future<void> _fetchFriends(Position? userPosition) async {
-    List<dynamic> data =
-        await apiServiceAdapter.fetchNearbyFriendsHttp(userId);
+    List<dynamic> data = await apiServiceAdapter.fetchNearbyFriendsHttp(userId);
 
     List<Friend> fetchedFriends =
         data.map((json) => Friend.fromJson(json)).toList();
@@ -100,7 +99,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
               userPosition.longitude,
               friend.latitude,
               friend.longitude,
-            ); // in metros
+            );
       }
 
       fetchedFriends.sort((a, b) => a.distance.compareTo(b.distance));
@@ -121,22 +120,25 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
-       title: const Text(
-  'Friends',
-  style: TextStyle(
-    color: Colors.black,
-    fontWeight: FontWeight.bold,
-    fontSize: 24,
-  ),
-),
-actions: [
-  AddFriendPopup(userId: userId),
-]),
-
+        title: const Text(
+          'Friends',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.black),
+            tooltip: 'Refresh',
+            onPressed: _initialize,
+          ),
+          AddFriendPopup(userId: userId),
+        ],
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : error.isNotEmpty
@@ -144,8 +146,8 @@ actions: [
               : Column(
                   children: [
                     if (locationPermissionDenied)
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
+                      const Padding(
+                        padding: EdgeInsets.all(12.0),
                         child: Text(
                           'Location permission denied. Showing friends without distance.',
                           style: TextStyle(color: Colors.red),
