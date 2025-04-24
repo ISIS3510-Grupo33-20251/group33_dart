@@ -6,6 +6,15 @@ class FriendCard extends StatelessWidget {
 
   const FriendCard({super.key, required this.friend});
 
+  String formatDistance(double distanceInMeters) {
+    if (distanceInMeters < 1000) {
+      return '${distanceInMeters.toStringAsFixed(0)} m away';
+    } else {
+      double distanceInKm = distanceInMeters / 1000;
+      return '${distanceInKm.toStringAsFixed(1)} km away';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -27,9 +36,9 @@ class FriendCard extends StatelessWidget {
           friend.name,
           style: const TextStyle(fontSize: 16),
         ),
-        subtitle: Text('${friend.distance.toStringAsFixed(2)} km away'),
+        subtitle: Text(formatDistance(friend.distance)),
         onTap: () {
-          // this works for viewing a friends schedule
+          // this works for viewing a friend's schedule
         },
       ),
     );
