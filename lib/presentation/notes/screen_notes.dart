@@ -181,7 +181,7 @@ class _ScreenNotesState extends State<ScreenNotes> {
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: Text("Cerrar"),
+                                    child: Text("Close"),
                                   ),
                                 ],
                               ),
