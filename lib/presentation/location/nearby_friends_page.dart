@@ -5,6 +5,7 @@ import '../widgets/friends/friend_list.dart';
 import '../../globals.dart';
 import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
+import 'add_friend_popup.dart';
 
 final ApiServiceAdapter apiServiceAdapter =
     ApiServiceAdapter(backendUrl: backendUrl);
@@ -99,8 +100,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
               userPosition.longitude,
               friend.latitude,
               friend.longitude,
-            ) /
-            1000; // in km
+            ); // in metros
       }
 
       fetchedFriends.sort((a, b) => a.distance.compareTo(b.distance));
@@ -125,23 +125,18 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
             Navigator.pop(context);
           },
         ),
-        title: const Text(
-          'Friends',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
-            onPressed: () {
-              // to program the add friends
-            },
-          ),
-        ],
-      ),
+       title: const Text(
+  'Friends',
+  style: TextStyle(
+    color: Colors.black,
+    fontWeight: FontWeight.bold,
+    fontSize: 24,
+  ),
+),
+actions: [
+  AddFriendPopup(userId: userId),
+]),
+
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : error.isNotEmpty

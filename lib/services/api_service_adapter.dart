@@ -199,5 +199,80 @@ Future<List<dynamic>> fetchNearbyFriendsHttp(String userId) async {
     throw Exception('Failed to fetch friends');
   }
 }
+  Future<void> sendFriendRequest(String senderId, String receiverEmail) async {
+  final response = await http.post(
+    Uri.parse('$backendUrl/friend_requests/by_email'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'senderId': senderId, 
+      'email': receiverEmail,
+    }),
+  );
 
+  if (response.statusCode != 200) {
+    throw Exception('Failed to send friend request: ${response.body}');
+  }
+}
+
+  Future<List<dynamic>> getPendingRequests(String userId) async {
+    final response = await http.get(
+      Uri.parse('$backendUrl/friend_requests/pending/$userId'),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch pending requests: ${response.body}');
+    }
+  }
+
+  Future<void> acceptFriendRequest(String requestId) async {
+    final response = await http.post(
+      Uri.parse('$backendUrl/friend_requests/$requestId/accept'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to accept request: ${response.body}');
+    }
+  }
+
+  Future<void> rejectFriendRequest(String requestId) async {
+    final response = await http.post(
+      Uri.parse('$backendUrl/friend_requests/$requestId/reject'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to reject request: ${response.body}');
+    }
+  }
+
+  Future<void> addFriend(String userId, String friendId) async {
+    final response = await http.post(
+      Uri.parse('$backendUrl/users/$userId/friends/$friendId'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to add friend: ${response.body}');
+    }
+  }
+
+  Future<void> removeFriend(String userId, String friendId) async {
+    final response = await http.delete(
+      Uri.parse('$backendUrl/users/$userId/friends/$friendId'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to remove friend: ${response.body}');
+    }
+  }
+
+
+Future<Map<String, dynamic>> fetchUserById(String userId) async {
+  final response = await http.get(Uri.parse('$backendUrl/users/$userId'));
+  if (response.statusCode == 200) {
+    return json.decode(response.body);
+  } else {
+    throw Exception('Failed to fetch user');
+  }
+}
 }
