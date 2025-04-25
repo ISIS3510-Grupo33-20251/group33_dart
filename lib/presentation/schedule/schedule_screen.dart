@@ -28,9 +28,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (Timer t) {
-      setState(() {
-        _now = DateTime.now();
+    _now = DateTime.now();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _timer = Timer.periodic(const Duration(minutes: 1), (Timer t) {
+        if (mounted) {
+          setState(() {
+            _now = DateTime.now();
+          });
+        }
       });
     });
   }
@@ -38,6 +43,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _timer = null;
     _nameController.dispose();
     _professorController.dispose();
     _roomController.dispose();
@@ -64,12 +70,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             children: [
               Column(
                 children: [
+                  const SizedBox(height: 1), // Add small padding at top
                   _buildWeekDays(),
                   Expanded(
                     child: Stack(
+                      fit: StackFit.expand,
                       children: [
                         _buildTimeSlots(),
-                        _buildCurrentTimeLine(),
+                        if (_getCurrentDayIndex() != -1 &&
+                            _now.hour >= 7 &&
+                            _now.hour < 20)
+                          _buildCurrentTimeLine(),
                       ],
                     ),
                   ),
@@ -168,20 +179,33 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildCurrentTimeLine() {
-    if (_getCurrentDayIndex() == -1) return const SizedBox.shrink();
+    final currentDayIndex = _getCurrentDayIndex();
+    print('Current day index: $currentDayIndex');
+
+    if (currentDayIndex == -1) {
+      print('Not showing timeline: weekend');
+      return const SizedBox.shrink();
+    }
 
     final now = _now;
     final currentHour = now.hour;
     final currentMinute = now.minute;
 
+    print('Current time: $currentHour:$currentMinute');
+
     // Only show timeline during school hours (7-20)
     if (currentHour < 7 || currentHour >= 20) {
+      print('Not showing timeline: outside school hours');
       return const SizedBox.shrink();
     }
 
     // Calculate position
+    final hourHeight = 60.0; // Height of each hour slot
+    final minuteHeight = hourHeight / 60.0; // Height of each minute
     final timelinePosition =
-        ((currentHour - 7) * 60 + currentMinute).toDouble();
+        ((currentHour - 7) * hourHeight) + (currentMinute * minuteHeight);
+
+    print('Timeline position: $timelinePosition');
 
     return Positioned(
       left: 56,
@@ -190,22 +214,26 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       child: Container(
         height: 2,
         color: Colors.red.withOpacity(0.8),
-        child: Row(
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            Container(
-              width: 10,
-              height: 10,
-              margin: const EdgeInsets.only(left: -5),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.red.withOpacity(0.3),
-                    blurRadius: 4,
-                    spreadRadius: 2,
-                  ),
-                ],
+            Positioned(
+              left: 0,
+              top: -4,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withOpacity(0.3),
+                      blurRadius: 4,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -278,19 +306,26 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final scheduleService = context.read<ScheduleService>();
     final classes = scheduleService.getClassesForDayAndHour(dayIndex, hour);
 
+    print(
+        'Building class block for day $dayIndex, hour $hour. Found ${classes.length} classes');
+
     if (classes.isEmpty) {
-      return Container(
-        margin: const EdgeInsets.all(2),
+      return const SizedBox(
+        width: double.infinity,
+        height: double.infinity,
       );
     }
 
+    final classModel = classes[0];
+    print(
+        'Class found: ${classModel.name} at ${classModel.startTime.hour}:${classModel.startTime.minute}');
     return GestureDetector(
-      onTap: () => _showClassDialog(classes[0]),
+      onTap: () => _showClassDialog(classModel),
       child: Container(
         margin: const EdgeInsets.all(2),
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: classes[0].color,
+          color: classModel.color,
           borderRadius: BorderRadius.circular(4),
         ),
         child: Column(
@@ -298,7 +333,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              classes[0].name,
+              classModel.name,
               style: const TextStyle(
                 color: Colors.black87,
                 fontWeight: FontWeight.w600,
@@ -306,9 +341,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
               overflow: TextOverflow.ellipsis,
             ),
-            if (classes[0].room.isNotEmpty)
+            if (classModel.room.isNotEmpty)
               Text(
-                classes[0].room,
+                classModel.room,
                 style: const TextStyle(
                   color: Colors.black54,
                   fontSize: 10,
@@ -461,6 +496,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 final name = _nameController.text.trim();
                 if (name.isEmpty) return;
 
+                print('Creating new class:');
+                print('Name: $name');
+                print('Day: $_selectedDay');
+                print('Start time: ${_startTime.hour}:${_startTime.minute}');
+                print('End time: ${_endTime.hour}:${_endTime.minute}');
+
                 final newClass = ClassModel(
                   id: _editingClass?.id ??
                       DateTime.now().millisecondsSinceEpoch.toString(),
@@ -488,6 +529,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
                   );
                 } catch (e) {
+                  print('Error in dialog when adding class: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error adding class: $e'),

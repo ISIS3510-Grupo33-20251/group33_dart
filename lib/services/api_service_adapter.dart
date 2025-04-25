@@ -292,17 +292,33 @@ class ApiServiceAdapter {
   }
 
   Future<Map<String, dynamic>> createSchedule(String userId) async {
+    print(
+        'Creating schedule for user $userId at endpoint: $backendUrl/schedules/');
+
+    // Generar un ID único para el schedule
+    final scheduleId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    final body = {"_id": scheduleId, "user_id": userId, "meetings": []};
+
+    print('Request body: ${json.encode(body)}');
+
     final response = await http.post(
       Uri.parse('$backendUrl/schedules/'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'user_id': userId,
-      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: json.encode(body),
     );
-    if (response.statusCode == 200) {
+
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
       return json.decode(response.body);
     } else {
-      throw Exception('Failed to create schedule');
+      throw Exception(
+          'Failed to create schedule. Status: ${response.statusCode}, Body: ${response.body}');
     }
   }
 
