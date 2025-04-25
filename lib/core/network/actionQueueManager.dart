@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:isolate';
 import 'package:group33_dart/core/network/internet.dart';
 import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
@@ -24,36 +25,57 @@ class ActionQueueManager {
 
   /// Initialize the queue manager: perform an immediate check and start monitoring
   Future<void> init() async {
-    while (userId == '1') {
-      await Future.delayed(Duration(
-          seconds: 1)); // Espera 1 segundo antes de comprobar nuevamente
-    }
     dispose();
-    await _checkConnection();
+    await _checkConnection(); // Usar la verificación de conexión con Isolate
     print('Manager inicializado');
     await _startMonitoring();
   }
 
+  /// Method to set the connection status
+  void setConnectionStatus(bool isConnected) {
+    _isConnected = isConnected;
+    if (_isConnected && userId != '1') {
+      _processQueue();
+    }
+  }
+
+  /// Start periodic monitoring of the connection
   Future<void> _startMonitoring() async {
     await Future.delayed(const Duration(milliseconds: 100));
     _timer =
         Timer.periodic(const Duration(seconds: 5), (_) => _checkConnection());
   }
 
+  /// Check the internet connection using an isolate
   Future<void> _checkConnection() async {
     try {
-      final result = await checkInternetConnection();
-      if (result) {
-        if (!_isConnected) {
-          _isConnected = true;
-          await _processQueue();
-        }
-      } else {
-        _isConnected = false;
-      }
+      final receivePort =
+          ReceivePort(); // Puerto para recibir mensajes del Isolate
+
+      // Llama al Isolate para realizar la verificación de conexión
+      await Isolate.spawn(checkConnectionInIsolate, receivePort.sendPort);
+
+      // Espera el resultado del Isolate
+      final result = await receivePort.first;
+
+      setConnectionStatus(
+          result); // Establece el estado de la conexión basado en el resultado
     } catch (e) {
-      print('Error verifying connection: $e');
-      _isConnected = false;
+      print('Error verifying connection in isolate: $e');
+      setConnectionStatus(
+          false); // En caso de error, establece la conexión como falsa
+    }
+  }
+
+  /// Function to be executed in the isolate to check the internet connection
+  static Future<void> checkConnectionInIsolate(SendPort sendPort) async {
+    try {
+      final result =
+          await checkInternetConnection(); // Verificación de conexión
+      sendPort.send(result); // Enviar el resultado al puerto de envío
+    } catch (e) {
+      print('Error in isolate: $e');
+      sendPort.send(false); // Enviar 'false' si ocurre un error
     }
   }
 
@@ -62,7 +84,7 @@ class ActionQueueManager {
     final queue = await _localStorage.loadActionQueue();
     queue.add({'key': id, 'value': action, 'attempts': '0'});
     await _localStorage.saveActionQueue(queue);
-    if (_isConnected) {
+    if (_isConnected && userId != '1') {
       await _processQueue();
     }
   }
@@ -72,7 +94,7 @@ class ActionQueueManager {
     final queue = await _localStorage.loadActionQueue();
     final index = queue.indexWhere((entry) => entry['key'] == id);
     if (index != -1) {
-      queue[index] = {'key': id, 'value': newAction};
+      queue[index] = {'key': id, 'value': newAction, 'attempts': '0'};
       await _localStorage.saveActionQueue(queue);
       return true;
     }
@@ -155,5 +177,9 @@ class ActionQueueManager {
   void dispose() {
     _timer?.cancel();
     _timer = null;
+  }
+
+  bool getIsConnected() {
+    return _isConnected;
   }
 }
