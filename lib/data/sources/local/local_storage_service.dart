@@ -5,6 +5,7 @@ import 'package:group33_dart/globals.dart';
 class LocalStorageService {
   static const String _notesKey = 'cached_notes';
   static const String _actionQueueKey = 'cached_queue';
+  static const String _friendsKey = 'cached_friends';
 
   Box get _box => Hive.box('storage');
 
@@ -83,4 +84,18 @@ class LocalStorageService {
     final notes = await loadNotes();
     return notes.firstWhere((note) => note['_id'] == noteId);
   }
+  Future<void> saveFriends(List<Map<String, dynamic>> friends) async {
+  final jsonFriends = jsonEncode(friends);
+  await _box.put('cached_friends', jsonFriends);
+  await _box.flush();
+}
+
+Future<List<Map<String, dynamic>>> loadFriends() async {
+  await ensureBoxIsOpen();
+  final raw = _box.get('cached_friends');
+  if (raw == null) return [];
+  final List<dynamic> decoded = jsonDecode(raw);
+  return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+}
+
 }

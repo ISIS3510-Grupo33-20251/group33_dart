@@ -24,34 +24,43 @@ class _PendingRequestsState extends State<PendingRequests> {
   }
 
   Future<void> _loadPendingRequests() async {
-    try {
-      final data = await apiServiceAdapter.getPendingRequests(userId);
-      List<Map<String, dynamic>> enriched = [];
-
-      for (var req in data) {
-        final senderId = req['sender_id'];
-        try {
-          final senderData = await apiServiceAdapter.fetchUserById(senderId);
-          req['name'] = senderData['name'] ?? 'Unknown';
-          req['email'] = senderData['email'] ?? 'unknown@example.com';
-        } catch (_) {
-          req['name'] = 'Unknown';
-          req['email'] = 'unknown@example.com';
-        }
-        enriched.add(req);
-      }
-
-      setState(() {
-        _pendingRequests = enriched;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = 'Error loading requests: $e';
-        _isLoading = false;
-      });
-    }
+  final hasConnection = await hasInternetConnection();
+  if (!hasConnection) {
+    setState(() {
+      _error = 'No internet connection. Please try again later.';
+      _isLoading = false;
+    });
+    return;
   }
+
+  try {
+    final data = await apiServiceAdapter.getPendingRequests(userId);
+    List<Map<String, dynamic>> enriched = [];
+
+    for (var req in data) {
+      final senderId = req['sender_id'];
+      try {
+        final senderData = await apiServiceAdapter.fetchUserById(senderId);
+        req['name'] = senderData['name'] ?? 'Unknown';
+        req['email'] = senderData['email'] ?? 'unknown@example.com';
+      } catch (_) {
+        req['name'] = 'Unknown';
+        req['email'] = 'unknown@example.com';
+      }
+      enriched.add(req);
+    }
+
+    setState(() {
+      _pendingRequests = enriched;
+      _isLoading = false;
+    });
+  } catch (e) {
+    setState(() {
+      _error = 'Error loading requests: $e';
+      _isLoading = false;
+    });
+  }
+}
 
   Future<void> _respondToRequest(String requestId, bool accept) async {
     try {
