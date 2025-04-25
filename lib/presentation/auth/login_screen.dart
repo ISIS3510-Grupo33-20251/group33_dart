@@ -53,12 +53,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response != null) {
         if (!context.mounted) return;
 
-        // Initialize schedule service
-        final scheduleService =
-            Provider.of<ScheduleService>(context, listen: false);
-        await scheduleService
-            .initializeSchedule(); // Initialize schedule after login
-
         Navigator.pushReplacementNamed(context, '/home');
       } else {
         _showErrorSnackBar('Invalid email or password');

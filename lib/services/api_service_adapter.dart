@@ -394,7 +394,6 @@ class ApiServiceAdapter {
     }
   }
 }
-}
 
 Future<bool> hasInternetConnection() async {
   try {
@@ -404,4 +403,3 @@ Future<bool> hasInternetConnection() async {
     return false;
   }
 }
-

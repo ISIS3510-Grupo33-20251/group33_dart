@@ -1,13 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
+part 'class_model.g.dart';
+
+@HiveType(typeId: 0)
 class ClassModel {
+  @HiveField(0)
   final String id;
+
+  @HiveField(1)
   final String name;
+
+  @HiveField(2)
   final String professor;
+
+  @HiveField(3)
   final String room;
+
+  @HiveField(4)
   final int dayOfWeek; // 0 = Monday, 4 = Friday
+
+  @HiveField(5)
   final TimeOfDay startTime;
+
+  @HiveField(6)
   final TimeOfDay endTime;
+
+  @HiveField(7)
   final Color color;
 
   ClassModel({

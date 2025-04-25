@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import '../domain/models/class_model.dart';
-import '../data/sources/local/cache_service.dart';
+import '../data/sources/local/schedule_storage.dart';
 import 'api_service_adapter.dart';
 import '../globals.dart';
 
 class ScheduleService extends ChangeNotifier {
-  static const String _cacheKey = 'schedule_cache';
-  static const String _scheduleIdKey = 'schedule_id_cache';
-  final CacheService _cacheService = CacheService();
+  final ScheduleStorage _storage = ScheduleStorage();
   final ApiServiceAdapter _apiService;
   List<ClassModel> _classes = [];
   String? _scheduleId;
+  bool _isInitialized = false;
 
   static const List<Color> classColors = [
     Color(0xFFFF5252), // Red
@@ -30,98 +29,79 @@ class ScheduleService extends ChangeNotifier {
   }
 
   Future<void> _initializeSchedule() async {
+    if (_isInitialized) return;
+
     try {
-      // Try to load schedule ID from cache first
-      final cachedScheduleId =
-          await _cacheService.loadCachedFlashcard(_scheduleIdKey);
-      if (cachedScheduleId.isNotEmpty && cachedScheduleId[0] is Map) {
-        _scheduleId = (cachedScheduleId[0] as Map)['id']?.toString();
-        print('Loaded schedule ID from cache: $_scheduleId');
-      }
+      print('Initializing schedule storage...');
+      await _storage.initialize();
 
-      // Try to load classes from cache
-      final cachedData = await _cacheService.loadCachedFlashcard(_cacheKey);
-      if (cachedData.isNotEmpty) {
-        _classes = cachedData.map((json) => ClassModel.fromJson(json)).toList();
+      // Cargar datos locales primero
+      print('Loading local data...');
+      _scheduleId = await _storage.getScheduleId();
+      _classes = await _storage.getClasses();
+
+      if (_classes.isNotEmpty) {
+        print('Loaded ${_classes.length} classes from local storage');
         notifyListeners();
-        print('Loaded ${_classes.length} classes from cache');
       }
 
-      // Try to sync with backend
-      await _syncWithBackend();
+      // Intentar sincronizar con el backend solo si tenemos userId
+      if (userId != null) {
+        print('Attempting to sync with backend...');
+        await _syncWithBackend();
+      } else {
+        print('No userId available, working in offline mode');
+      }
+
+      _isInitialized = true;
     } catch (e) {
       print('Error initializing schedule: $e');
+      _isInitialized = true; // Marcar como inicializado para evitar bucles
     }
   }
 
   Future<void> _syncWithBackend() async {
-    if (userId == null) {
-      print('No userId available, working in offline mode');
-      return;
-    }
-
     try {
       if (_scheduleId == null) {
-        print('Attempting to get or create schedule for user $userId');
+        print('No local schedule ID, checking backend...');
+        final schedules = await _apiService.getSchedules();
+        print('Found ${schedules.length} schedules');
 
-        try {
-          final schedules = await _apiService.getSchedules();
-          print('Found ${schedules.length} schedules');
+        var userSchedule = schedules.firstWhere(
+          (schedule) => schedule['user_id'] == userId,
+          orElse: () => {},
+        );
 
-          var userSchedule = schedules.firstWhere(
-            (schedule) => schedule['user_id'] == userId,
-            orElse: () => {},
-          );
-
-          if (userSchedule.isNotEmpty) {
-            _scheduleId = userSchedule['_id'];
-            print('Found existing schedule with ID: $_scheduleId');
-          } else {
-            print('No existing schedule found, creating new one...');
-            try {
-              final newSchedule = await _apiService.createSchedule(userId!);
-              _scheduleId = newSchedule['_id'];
-              print('Created new schedule with ID: $_scheduleId');
-            } catch (e) {
-              print('Failed to create schedule, working in offline mode: $e');
-              return;
-            }
-          }
-
-          if (_scheduleId != null) {
-            await _cacheService.cacheFlashcard(_scheduleIdKey, [
-              {'id': _scheduleId}
-            ]);
-            print('Cached schedule ID: $_scheduleId');
-          }
-        } catch (e) {
-          print('Error accessing backend, working in offline mode: $e');
-          return;
+        if (userSchedule.isNotEmpty) {
+          _scheduleId = userSchedule['_id'];
+          print('Found existing schedule with ID: $_scheduleId');
+          await _storage.saveScheduleId(_scheduleId);
+        } else {
+          print('Creating new schedule...');
+          final newSchedule = await _apiService.createSchedule(userId!);
+          _scheduleId = newSchedule['_id'];
+          print('Created new schedule with ID: $_scheduleId');
+          await _storage.saveScheduleId(_scheduleId);
         }
       }
 
+      // Cargar clases del backend
       if (_scheduleId != null) {
         await _loadMeetings();
       }
     } catch (e) {
-      print('Error during backend sync, continuing in offline mode: $e');
+      print('Error syncing with backend: $e');
     }
   }
 
   Future<void> _loadMeetings() async {
-    if (_scheduleId == null) {
-      print('No schedule ID available');
-      return;
-    }
+    if (_scheduleId == null) return;
 
     try {
-      print('Loading meetings for schedule $_scheduleId');
+      print('Loading meetings from backend...');
       final meetings = await _apiService.getScheduleMeetings(_scheduleId!);
-      print('Received ${meetings.length} meetings from backend');
 
       _classes = meetings.map((meeting) {
-        print(
-            'Processing meeting: ${meeting['name']} on day ${meeting['day_of_week']}');
         return ClassModel(
           id: meeting['_id'],
           name: meeting['name'],
@@ -134,12 +114,12 @@ class ScheduleService extends ChangeNotifier {
         );
       }).toList();
 
-      await _updateCache();
+      // Guardar las clases localmente
+      await _storage.saveClasses(_classes);
       notifyListeners();
-      print('Successfully loaded and cached ${_classes.length} meetings');
+      print('Synced and saved ${_classes.length} classes locally');
     } catch (e) {
-      print('Error loading meetings: $e');
-      throw Exception('Failed to load meetings: $e');
+      print('Error loading meetings from backend: $e');
     }
   }
 
@@ -147,20 +127,29 @@ class ScheduleService extends ChangeNotifier {
     try {
       print('Adding new class: ${classModel.name}');
 
-      // Primero guardamos localmente
+      // Generar un ID temporal si no existe
+      if (classModel.id.isEmpty) {
+        classModel = ClassModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: classModel.name,
+          professor: classModel.professor,
+          room: classModel.room,
+          dayOfWeek: classModel.dayOfWeek,
+          startTime: classModel.startTime,
+          endTime: classModel.endTime,
+          color: classModel.color,
+        );
+      }
+
+      // Guardar localmente primero
+      await _storage.addClass(classModel);
       _classes.add(classModel);
       notifyListeners();
-      await _updateCache();
-      print('Class added locally');
+      print('Class added to local storage');
 
-      // Luego intentamos sincronizar con el backend
-      try {
-        if (_scheduleId == null) {
-          print('No schedule ID available, attempting to sync with backend...');
-          await _syncWithBackend();
-        }
-
-        if (_scheduleId != null) {
+      // Intentar sincronizar con el backend
+      if (_scheduleId != null) {
+        try {
           final meetingData = {
             'name': classModel.name,
             'professor': classModel.professor,
@@ -173,23 +162,15 @@ class ScheduleService extends ChangeNotifier {
             'color': classModel.color.value.toString(),
           };
 
-          print(
-              'Adding meeting to schedule $_scheduleId with data: $meetingData');
           await _apiService.addMeetingToSchedule(_scheduleId!, meetingData);
-          print('Successfully synced with backend');
+          print('Class synced with backend');
 
-          // Recargar las clases desde el backend
+          // Recargar desde el backend para obtener el ID correcto
           await _loadMeetings();
-        } else {
-          print('Working in offline mode - changes will sync later');
+        } catch (e) {
+          print('Failed to sync with backend: $e');
         }
-      } catch (e) {
-        print('Backend sync failed: $e');
-        print('Continuing in offline mode - changes are saved locally');
       }
-
-      print(
-          'Class added successfully (${_scheduleId == null ? 'offline' : 'online'} mode)');
     } catch (e) {
       print('Error adding class: $e');
       throw Exception('Failed to add class: $e');
@@ -197,29 +178,38 @@ class ScheduleService extends ChangeNotifier {
   }
 
   Future<void> removeClass(String id) async {
-    if (_scheduleId == null) return;
-
     try {
-      await _apiService.removeMeetingFromSchedule(_scheduleId!, id);
+      // Eliminar localmente primero
+      await _storage.removeClass(id);
       _classes.removeWhere((c) => c.id == id);
-      await _updateCache();
       notifyListeners();
-      print('Removed class with id: $id');
+      print('Class removed from local storage');
+
+      // Intentar eliminar del backend
+      if (_scheduleId != null) {
+        try {
+          await _apiService.removeMeetingFromSchedule(_scheduleId!, id);
+          print('Class removed from backend');
+        } catch (e) {
+          print('Failed to remove class from backend: $e');
+        }
+      }
     } catch (e) {
       print('Error removing class: $e');
-      throw Exception('Failed to remove class');
+      throw Exception('Failed to remove class: $e');
     }
   }
 
-  Future<void> _updateCache() async {
+  Future<void> clearLocalData() async {
     try {
-      await _cacheService.cacheFlashcard(
-        _cacheKey,
-        _classes.map((c) => c.toJson()).toList(),
-      );
-      print('Updated cache with ${_classes.length} classes');
+      await _storage.clear();
+      _classes = [];
+      _scheduleId = null;
+      _isInitialized = false;
+      notifyListeners();
+      print('Local data cleared');
     } catch (e) {
-      print('Error updating cache: $e');
+      print('Error clearing local data: $e');
     }
   }
 
@@ -227,16 +217,9 @@ class ScheduleService extends ChangeNotifier {
     final classes = _classes.where((c) {
       final isCorrectDay = c.dayOfWeek == dayIndex;
       final startsThisHour = c.startTime.hour == hour;
-
-      print(
-          'Checking class ${c.name}: day=${c.dayOfWeek}, hour=${c.startTime.hour}');
-      print('Comparing with: dayIndex=$dayIndex, hour=$hour');
-      print('isCorrectDay=$isCorrectDay, startsThisHour=$startsThisHour');
-
       return isCorrectDay && startsThisHour;
     }).toList();
 
-    print('Found ${classes.length} classes for day $dayIndex at hour $hour');
     return classes;
   }
 
@@ -250,10 +233,6 @@ class ScheduleService extends ChangeNotifier {
       hour: int.parse(parts[0]),
       minute: int.parse(parts[1]),
     );
-  }
-
-  Future<void> initializeSchedule() async {
-    await _initializeSchedule();
   }
 
   void debugPrintClasses() {
