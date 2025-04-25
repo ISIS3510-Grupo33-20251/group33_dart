@@ -139,7 +139,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
 
       setState(() {
         friends = cachedFriends;
-        error = 'No internet. Showing cached friends.';
+        error = 'No internet. Showing distance based on your last location with internet.';
         isLoading = false;
         locationPermissionDenied = true;
       });
