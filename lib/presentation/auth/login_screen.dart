@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../../services/api_service_adapter.dart';
 import '../../globals.dart';
 import '../../services/connectivity_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../../services/schedule_service.dart';
+import 'dart:convert';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -45,9 +49,20 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text,
         _passwordController.text,
       );
-      userId = response["userId"];
 
-      Navigator.pushReplacementNamed(context, '/home');
+      if (response != null) {
+        if (!context.mounted) return;
+
+        // Initialize schedule service
+        final scheduleService =
+            Provider.of<ScheduleService>(context, listen: false);
+        await scheduleService
+            .initializeSchedule(); // Initialize schedule after login
+
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        _showErrorSnackBar('Invalid email or password');
+      }
     } catch (e) {
       _showErrorSnackBar('Invalid email or password');
     } finally {

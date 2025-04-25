@@ -27,29 +27,33 @@ class ClassModel {
       'name': name,
       'professor': professor,
       'room': room,
-      'startTime': '${startTime.hour}:${startTime.minute}',
-      'endTime': '${endTime.hour}:${endTime.minute}',
-      'color': color.value,
       'dayOfWeek': dayOfWeek,
+      'startTime':
+          '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
+      'endTime':
+          '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
+      'color': color.value,
     };
   }
 
   factory ClassModel.fromJson(Map<String, dynamic> json) {
     return ClassModel(
-      id: json['id'],
-      name: json['name'],
-      professor: json['professor'],
-      room: json['room'],
-      dayOfWeek: json['dayOfWeek'],
-      startTime: TimeOfDay(
-        hour: int.parse(json['startTime'].split(':')[0]),
-        minute: int.parse(json['startTime'].split(':')[1]),
-      ),
-      endTime: TimeOfDay(
-        hour: int.parse(json['endTime'].split(':')[0]),
-        minute: int.parse(json['endTime'].split(':')[1]),
-      ),
-      color: Color(json['color']),
+      id: json['id'] as String,
+      name: json['name'] as String,
+      professor: json['professor'] as String? ?? '',
+      room: json['room'] as String? ?? '',
+      dayOfWeek: json['dayOfWeek'] as int,
+      startTime: _parseTimeOfDay(json['startTime'] as String),
+      endTime: _parseTimeOfDay(json['endTime'] as String),
+      color: Color(json['color'] as int),
+    );
+  }
+
+  static TimeOfDay _parseTimeOfDay(String time) {
+    final parts = time.split(':');
+    return TimeOfDay(
+      hour: int.parse(parts[0]),
+      minute: int.parse(parts[1]),
     );
   }
 }

@@ -4,6 +4,7 @@ import '../../domain/models/class_model.dart';
 import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import '../../globals.dart';
+import 'dart:async';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -21,91 +22,194 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   int _selectedDay = 0;
   Color _selectedColor = ScheduleService.classColors[0];
   ClassModel? _editingClass;
+  Timer? _timer;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(minutes: 1), (Timer t) {
+      setState(() {
+        _now = DateTime.now();
+      });
+    });
+  }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _nameController.dispose();
     _professorController.dispose();
     _roomController.dispose();
     super.dispose();
   }
 
+  // Función para obtener el índice del día actual (0-4 para Lun-Vie)
+  int _getCurrentDayIndex() {
+    final now = DateTime.now();
+    // Convert from DateTime's 1-7 (Mon-Sun) to our 0-4 (Mon-Fri)
+    final weekday = now.weekday - 1;
+    // Return -1 if it's weekend, otherwise return 0-4
+    return weekday >= 5 ? -1 : weekday;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ScheduleService>(
       builder: (context, scheduleService, child) {
-        return Stack(
-          children: [
-            Column(
-              children: [
-                _buildWeekDays(),
-                Expanded(
-                  child: _buildTimeSlots(),
-                ),
-              ],
-            ),
-            Positioned(
-              right: 16,
-              bottom: 16,
-              child: FloatingActionButton(
-                onPressed: () => _showClassDialog(),
-                child: const Icon(Icons.add),
-                backgroundColor: _selectedColor,
+        return SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _buildWeekDays(),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        _buildTimeSlots(),
+                        _buildCurrentTimeLine(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: FloatingActionButton(
+                  onPressed: () => _showClassDialog(),
+                  child: const Icon(Icons.add),
+                  backgroundColor: _selectedColor,
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
   Widget _buildWeekDays() {
-    final List<String> days = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
-    final List<String> dates = ['25', '26', '27', '28', '29'];
+    List<String> dayAbbr = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
+    // Calculate the dates for this week
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    List<String> dayNumbers = List.generate(
+        5, (index) => (monday.add(Duration(days: index))).day.toString());
+    int currentDayIndex = _getCurrentDayIndex();
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      height: 60,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey[300]!,
+            width: 0.5,
+          ),
+        ),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(5, (index) {
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedDay = index;
-              });
-            },
-            child: Column(
-              children: [
-                Text(
-                  days[index],
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: index == _selectedDay
-                        ? Colors.grey[200]
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    dates[index],
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: index == _selectedDay ? Colors.black : Colors.grey,
+        children: [
+          Container(
+            width: 56,
+            alignment: Alignment.center,
+            child: Text(
+              'Time',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          ...List.generate(5, (index) {
+            bool isCurrentDay = index == currentDayIndex;
+            return Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isCurrentDay ? Colors.blue.withOpacity(0.1) : null,
+                  border: Border(
+                    left: BorderSide(
+                      color: Colors.grey[300]!,
+                      width: 0.5,
                     ),
                   ),
                 ),
-              ],
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      dayNumbers[index],
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            isCurrentDay ? FontWeight.bold : FontWeight.normal,
+                        color: isCurrentDay ? Colors.blue : Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      dayAbbr[index],
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            isCurrentDay ? FontWeight.bold : FontWeight.normal,
+                        color: isCurrentDay ? Colors.blue : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentTimeLine() {
+    if (_getCurrentDayIndex() == -1) return const SizedBox.shrink();
+
+    final now = _now;
+    final currentHour = now.hour;
+    final currentMinute = now.minute;
+
+    // Only show timeline during school hours (7-20)
+    if (currentHour < 7 || currentHour >= 20) {
+      return const SizedBox.shrink();
+    }
+
+    // Calculate position
+    final timelinePosition =
+        ((currentHour - 7) * 60 + currentMinute).toDouble();
+
+    return Positioned(
+      left: 56,
+      right: 0,
+      top: timelinePosition,
+      child: Container(
+        height: 2,
+        color: Colors.red.withOpacity(0.8),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              margin: const EdgeInsets.only(left: -5),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.3),
+                    blurRadius: 4,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
             ),
-          );
-        }),
+          ],
+        ),
       ),
     );
   }
@@ -123,7 +227,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget _buildTimeSlot(int hour) {
     return Container(
       height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
@@ -134,10 +237,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 40,
+          Container(
+            width: 56,
+            padding: const EdgeInsets.only(left: 8),
+            alignment: Alignment.centerLeft,
             child: Text(
-              '$hour:00',
+              '${hour.toString().padLeft(2, '0')}:00',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -146,9 +251,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ),
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: List.generate(5, (index) {
                 return Expanded(
-                  child: _buildClassBlock(hour, index),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: Colors.grey[300]!,
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    child: _buildClassBlock(hour, index),
+                  ),
                 );
               }),
             ),
@@ -175,7 +291,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: classes[0].color,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -184,27 +300,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             Text(
               classes[0].name,
               style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
               ),
               overflow: TextOverflow.ellipsis,
             ),
-            if (classes[0].professor.isNotEmpty)
-              Text(
-                classes[0].professor,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 10,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
             if (classes[0].room.isNotEmpty)
               Text(
                 classes[0].room,
                 style: const TextStyle(
-                  color: Colors.white70,
+                  color: Colors.black54,
                   fontSize: 10,
+                  fontWeight: FontWeight.w500,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -215,27 +323,32 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _showClassDialog([ClassModel? classToEdit]) {
-    _editingClass = classToEdit;
-    if (classToEdit != null) {
-      _nameController.text = classToEdit.name;
-      _professorController.text = classToEdit.professor;
-      _roomController.text = classToEdit.room;
-      _selectedColor = classToEdit.color;
-      _startTime = classToEdit.startTime;
-      _endTime = classToEdit.endTime;
-      _selectedDay = classToEdit.dayOfWeek;
-    } else {
-      _nameController.clear();
-      _professorController.clear();
-      _roomController.clear();
-      _selectedColor = context.read<ScheduleService>().getRandomColor();
-    }
+    setState(() {
+      _editingClass = classToEdit;
+      if (classToEdit != null) {
+        _nameController.text = classToEdit.name;
+        _professorController.text = classToEdit.professor;
+        _roomController.text = classToEdit.room;
+        _selectedColor = classToEdit.color;
+        _startTime = classToEdit.startTime;
+        _endTime = classToEdit.endTime;
+        _selectedDay = classToEdit.dayOfWeek;
+      } else {
+        _nameController.clear();
+        _professorController.clear();
+        _roomController.clear();
+        _selectedColor = context.read<ScheduleService>().getRandomColor();
+        _startTime = TimeOfDay(hour: _now.hour, minute: 0);
+        _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
+        _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
+      }
+    });
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(classToEdit == null ? 'Add Class' : 'Edit Class'),
+          title: Text(classToEdit == null ? 'New Class' : 'Edit Class'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -243,21 +356,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               children: [
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Class Name'),
-                ),
-                TextField(
-                  controller: _professorController,
-                  decoration: const InputDecoration(labelText: 'Professor'),
-                ),
-                TextField(
-                  controller: _roomController,
-                  decoration: const InputDecoration(labelText: 'Room'),
+                  decoration: const InputDecoration(
+                    labelText: 'Class Name',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                // Day selector
+                TextField(
+                  controller: _professorController,
+                  decoration: const InputDecoration(
+                    labelText: 'Professor',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _roomController,
+                  decoration: const InputDecoration(
+                    labelText: 'Room',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 DropdownButtonFormField<int>(
                   value: _selectedDay,
-                  decoration: const InputDecoration(labelText: 'Day'),
+                  decoration: const InputDecoration(
+                    labelText: 'Day',
+                    border: OutlineInputBorder(),
+                  ),
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('Monday')),
                     DropdownMenuItem(value: 1, child: Text('Tuesday')),
@@ -272,7 +398,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                // Time selectors
                 Row(
                   children: [
                     Expanded(
@@ -323,7 +448,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       .read<ScheduleService>()
                       .removeClass(_editingClass!.id);
                   Navigator.pop(context);
-                  setState(() {});
                 },
                 child:
                     const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -335,32 +459,42 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             TextButton(
               onPressed: () {
                 final name = _nameController.text.trim();
-                final professor = _professorController.text.trim();
-                final room = _roomController.text.trim();
-
                 if (name.isEmpty) return;
-
-                final scheduleService = context.read<ScheduleService>();
-
-                if (_editingClass != null) {
-                  scheduleService.removeClass(_editingClass!.id);
-                }
 
                 final newClass = ClassModel(
                   id: _editingClass?.id ??
                       DateTime.now().millisecondsSinceEpoch.toString(),
                   name: name,
-                  professor: professor,
-                  room: room,
+                  professor: _professorController.text.trim(),
+                  room: _roomController.text.trim(),
                   dayOfWeek: _selectedDay,
                   startTime: _startTime,
                   endTime: _endTime,
                   color: _selectedColor,
                 );
 
-                scheduleService.addClass(newClass);
-                Navigator.pop(context);
-                setState(() {});
+                final scheduleService = context.read<ScheduleService>();
+                if (_editingClass != null) {
+                  scheduleService.removeClass(_editingClass!.id);
+                }
+                try {
+                  scheduleService.addClass(newClass);
+                  scheduleService.debugPrintClasses();
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Class added successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error adding class: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               child: Text(_editingClass == null ? 'Add' : 'Save'),
             ),
@@ -394,6 +528,38 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildClassCard(ClassModel classModel) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: classModel.color,
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            classModel.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            classModel.room,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

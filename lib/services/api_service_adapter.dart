@@ -277,4 +277,104 @@ class ApiServiceAdapter {
       throw Exception('Failed to fetch user');
     }
   }
+
+  // Schedule endpoints
+  Future<List<Map<String, dynamic>>> getSchedules() async {
+    final response = await http.get(
+      Uri.parse('$backendUrl/schedules/'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(json.decode(response.body));
+    } else {
+      throw Exception('Failed to fetch schedules');
+    }
+  }
+
+  Future<Map<String, dynamic>> createSchedule(String userId) async {
+    final response = await http.post(
+      Uri.parse('$backendUrl/schedules/'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'user_id': userId,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to create schedule');
+    }
+  }
+
+  Future<Map<String, dynamic>> getSchedule(String scheduleId) async {
+    final response = await http.get(
+      Uri.parse('$backendUrl/schedules/$scheduleId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to fetch schedule');
+    }
+  }
+
+  Future<void> updateSchedule(
+      String scheduleId, List<Map<String, dynamic>> meetings) async {
+    final response = await http.put(
+      Uri.parse('$backendUrl/schedules/$scheduleId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'meetings': meetings,
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update schedule');
+    }
+  }
+
+  Future<void> deleteSchedule(String scheduleId) async {
+    final response = await http.delete(
+      Uri.parse('$backendUrl/schedules/$scheduleId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete schedule');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getScheduleMeetings(
+      String scheduleId) async {
+    final response = await http.get(
+      Uri.parse('$backendUrl/schedules/$scheduleId/meetings'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(json.decode(response.body));
+    } else {
+      throw Exception('Failed to fetch meetings');
+    }
+  }
+
+  Future<void> addMeetingToSchedule(
+      String scheduleId, Map<String, dynamic> meeting) async {
+    final response = await http.post(
+      Uri.parse('$backendUrl/schedules/$scheduleId/meetings'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(meeting),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to add meeting');
+    }
+  }
+
+  Future<void> removeMeetingFromSchedule(
+      String scheduleId, String meetingId) async {
+    final response = await http.delete(
+      Uri.parse('$backendUrl/schedules/$scheduleId/meetings/$meetingId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to remove meeting');
+    }
+  }
 }
