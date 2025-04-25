@@ -14,7 +14,7 @@ class ApiServiceAdapter {
       if (Platform.isAndroid) {
         return '${backendUrl}/users/auth'; // Para emulador Android
       } else if (Platform.isIOS) {
-        return 'http://127.0.0.1:8000/users/auth'; // Para simulador iOS
+        return '${backendUrl}/users/auth'; // Para simulador iOS
       }
     }
     // Para producción o casos no manejados, usa localhost
@@ -177,42 +177,45 @@ class ApiServiceAdapter {
       throw Exception("Error");
     }
   }
-  Future<void> updateUserLocationHttp(String userId, double latitude, double longitude) async {
-  final url = Uri.parse('$backendUrl/users/$userId/location');
-  final response = await http.put(
-    url,
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
-  );
-  if (response.statusCode != 200) {
-    throw Exception('Failed to update location');
-  }
-}
 
-Future<List<dynamic>> fetchNearbyFriendsHttp(String userId) async {
-  final url = Uri.parse('$backendUrl/users/$userId/friends/location');
-  final response = await http.get(url);
-
-  if (response.statusCode == 200) {
-    return jsonDecode(response.body);
-  } else {
-    throw Exception('Failed to fetch friends');
+  Future<void> updateUserLocationHttp(
+      String userId, double latitude, double longitude) async {
+    final url = Uri.parse('$backendUrl/users/$userId/location');
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update location');
+    }
   }
-}
+
+  Future<List<dynamic>> fetchNearbyFriendsHttp(String userId) async {
+    final url = Uri.parse('$backendUrl/users/$userId/friends/location');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to fetch friends');
+    }
+  }
+
   Future<void> sendFriendRequest(String senderId, String receiverEmail) async {
-  final response = await http.post(
-    Uri.parse('$backendUrl/friend_requests/by_email'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'senderId': senderId, 
-      'email': receiverEmail,
-    }),
-  );
+    final response = await http.post(
+      Uri.parse('$backendUrl/friend_requests/by_email'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'senderId': senderId,
+        'email': receiverEmail,
+      }),
+    );
 
-  if (response.statusCode != 200) {
-    throw Exception('Failed to send friend request: ${response.body}');
+    if (response.statusCode != 200) {
+      throw Exception('Failed to send friend request: ${response.body}');
+    }
   }
-}
 
   Future<List<dynamic>> getPendingRequests(String userId) async {
     final response = await http.get(
@@ -266,13 +269,12 @@ Future<List<dynamic>> fetchNearbyFriendsHttp(String userId) async {
     }
   }
 
-
-Future<Map<String, dynamic>> fetchUserById(String userId) async {
-  final response = await http.get(Uri.parse('$backendUrl/users/$userId'));
-  if (response.statusCode == 200) {
-    return json.decode(response.body);
-  } else {
-    throw Exception('Failed to fetch user');
+  Future<Map<String, dynamic>> fetchUserById(String userId) async {
+    final response = await http.get(Uri.parse('$backendUrl/users/$userId'));
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to fetch user');
+    }
   }
-}
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../location/nearby_friends_page.dart';
 import '../widgets/menu/popup_menu.dart';
+import '../schedule/schedule_screen.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});
@@ -33,7 +34,10 @@ class MainMenuPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('SEMESTER 1',
-                style: TextStyle(color: Color.fromARGB(255, 81, 80, 80), fontSize: 12, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: Color.fromARGB(255, 81, 80, 80),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
             Text('Schedule',
                 style: TextStyle(
                     fontSize: 24,
@@ -50,7 +54,7 @@ class MainMenuPage extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(child: Text('horario')),
+      body: const ScheduleScreen(),
       bottomNavigationBar: BottomNavigationBar(
         onTap: (index) {
           if (index == 2) {

@@ -10,59 +10,61 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Círculos decorativos
-          Positioned(
-            right: -100,
-            top: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.7),
-                shape: BoxShape.circle,
-              ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: screenHeight -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom,
             ),
-          ),
-          Positioned(
-            left: -70,
-            bottom: -100,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                color: const Color(0xFFA5B3FF).withOpacity(0.7),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          // Contenido principal
-          SafeArea(
-            child: SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height -
-                      MediaQuery.of(context).padding.top -
-                      MediaQuery.of(context).padding.bottom,
+            child: Stack(
+              children: [
+                // Círculos decorativos
+                Positioned(
+                  right: -screenWidth * 0.25,
+                  top: -screenHeight * 0.1,
+                  child: Container(
+                    width: screenWidth * 0.8,
+                    height: screenWidth * 0.8,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                Positioned(
+                  left: -screenWidth * 0.2,
+                  bottom: -screenHeight * 0.15,
+                  child: Container(
+                    width: screenWidth * 0.7,
+                    height: screenWidth * 0.7,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFA5B3FF).withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                // Contenido principal
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.05),
+                      SizedBox(height: screenHeight * 0.05),
                       // Logo text
                       Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Text(
                             "Uni",
                             style: TextStyle(
-                              fontSize: 64,
+                              fontSize: 48,
                               fontWeight: FontWeight.w300,
                               fontFamily: 'SmoochSans',
                             ),
@@ -70,29 +72,28 @@ class WelcomeScreen extends StatelessWidget {
                           Text(
                             "Verse",
                             style: TextStyle(
-                              fontSize: 64,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 48,
+                              fontWeight: FontWeight.w600,
                               color: primaryColor,
                               fontFamily: 'SmoochSans',
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                      SizedBox(height: screenHeight * 0.02),
                       // Logo icon
                       Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: EdgeInsets.all(screenWidth * 0.05),
                         decoration: BoxDecoration(
                           color: const Color(0xFFA5B3FF).withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Image.asset(
                           'assets/logos/logo.png',
-                          height: 80,
+                          height: screenWidth * 0.2,
                         ),
                       ),
-                      SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.1),
+                      SizedBox(height: screenHeight * 0.1),
                       // Botones
                       Column(
                         mainAxisSize: MainAxisSize.min,
@@ -102,74 +103,79 @@ class WelcomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (context) => LoginScreen()),
+                                    builder: (context) => const LoginScreen()),
                               );
                             },
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 50),
+                              minimumSize:
+                                  Size(double.infinity, screenHeight * 0.06),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               backgroundColor: primaryColor,
                             ),
-                            child: const Text(
+                            child: Text(
                               "Log in",
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: screenWidth * 0.045,
                                 fontWeight: FontWeight.w600,
                                 fontFamily: 'Montserrat',
                               ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: screenHeight * 0.02),
                           TextButton(
                             onPressed: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (context) => RegisterScreen()),
+                                    builder: (context) =>
+                                        const RegisterScreen()),
                               );
                             },
                             style: TextButton.styleFrom(
                               foregroundColor: primaryColor,
-                              textStyle: const TextStyle(
-                                fontSize: 18,
+                              textStyle: TextStyle(
+                                fontSize: screenWidth * 0.045,
                                 fontFamily: 'Montserrat',
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               "Create a new account",
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: screenWidth * 0.045,
                                 fontFamily: 'Montserrat',
                                 color: primaryColor,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: screenHeight * 0.03),
                           _socialButton(
                             icon: "assets/google.svg",
                             text: "Sign in with Google",
                             onTap: () {},
+                            screenWidth: screenWidth,
+                            screenHeight: screenHeight,
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: screenHeight * 0.02),
                           _socialButton(
                             icon: "assets/facebook.svg",
                             text: "Sign in with Facebook",
                             onTap: () {},
+                            screenWidth: screenWidth,
+                            screenHeight: screenHeight,
                           ),
                         ],
                       ),
-                      SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.05),
+                      SizedBox(height: screenHeight * 0.05),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -178,12 +184,15 @@ class WelcomeScreen extends StatelessWidget {
     required String icon,
     required String text,
     required VoidCallback onTap,
+    required double screenWidth,
+    required double screenHeight,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+        padding: EdgeInsets.symmetric(
+            vertical: screenHeight * 0.015, horizontal: screenWidth * 0.06),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -192,17 +201,20 @@ class WelcomeScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            SvgPicture.asset(
+              icon,
+              height: screenWidth * 0.05,
+            ),
+            SizedBox(width: screenWidth * 0.03),
             Text(
               text,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: screenWidth * 0.04,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey.shade700,
                 fontFamily: 'Montserrat',
               ),
             ),
-            const SizedBox(width: 12),
-            SvgPicture.asset(icon, height: 24),
           ],
         ),
       ),

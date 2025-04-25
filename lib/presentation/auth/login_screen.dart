@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service_adapter.dart';
 import '../../globals.dart';
+import '../../services/connectivity_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -13,6 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   late final ApiServiceAdapter _apiService;
+  late final ConnectivityService _connectivityService;
   bool _isLoading = false;
   static const Color primaryColor = Color(0xFF7D91FA);
 
@@ -20,11 +22,19 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _apiService = ApiServiceAdapter(backendUrl: backendUrl);
+    _connectivityService = ConnectivityService();
   }
 
   Future<void> _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showErrorSnackBar('Please fill all fields');
+      return;
+    }
+
+    // Check connectivity before attempting login
+    final hasConnection = await _connectivityService.checkConnectivity();
+    if (!hasConnection) {
+      await _connectivityService.showNoInternetDialog(context);
       return;
     }
 
@@ -54,8 +64,8 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(
               child: Text(
                 message,
-                style:
-                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.red, fontWeight: FontWeight.bold),
               ),
             ),
             IconButton(
@@ -79,133 +89,140 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Positioned(
-            right: -50,
-            top: -25,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.7),
-                shape: BoxShape.circle,
-              ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom,
             ),
-          ),
-          Positioned(
-            left: -35,
-            bottom: -50,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                color: const Color(0xFFA5B3FF).withOpacity(0.7),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  // Back button
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios),
-                      color: Colors.grey[800],
-                      onPressed: () => Navigator.pop(context),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -50,
+                  top: -25,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.7),
+                      shape: BoxShape.circle,
                     ),
                   ),
-                  // Logo and title section
-                  Flexible(
-                    flex: 3,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          "Uni",
-                          style: TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.w300,
-                            fontFamily: 'SmoochSans',
-                          ),
-                        ),
-                        const Text(
-                          "Verse",
-                          style: TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor,
-                            fontFamily: 'SmoochSans',
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Image(
-                          image: AssetImage('assets/logos/logo.png'),
-                          height: 80,
-                        ),
-                      ],
+                ),
+                Positioned(
+                  left: -35,
+                  bottom: -50,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFA5B3FF).withOpacity(0.7),
+                      shape: BoxShape.circle,
                     ),
                   ),
-                  // Form section
-                  Flexible(
-                    flex: 2,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        buildInputField(
-                          "Email or Username",
-                          _emailController,
-                          false,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 16),
+                      // Back button
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_ios),
+                          color: Colors.grey[800],
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        buildInputField(
-                          "Password",
-                          _passwordController,
-                          true,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Button section
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 45),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        backgroundColor: primaryColor,
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              "Log in",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Montserrat',
-                              ),
+                      const SizedBox(height: 16),
+                      // Logo and title section
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            "Uni",
+                            style: TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.w300,
+                              fontFamily: 'SmoochSans',
                             ),
-                    ),
+                          ),
+                          const Text(
+                            "Verse",
+                            style: TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                              fontFamily: 'SmoochSans',
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Image(
+                            image: AssetImage('assets/logos/logo.png'),
+                            height: 80,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      // Form section
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          buildInputField(
+                            "Email or Username",
+                            _emailController,
+                            false,
+                          ),
+                          const SizedBox(height: 16),
+                          buildInputField(
+                            "Password",
+                            _passwordController,
+                            true,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      // Button section
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 45),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          backgroundColor: primaryColor,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                "Log in",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Montserrat',
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
