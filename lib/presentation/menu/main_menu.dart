@@ -1,9 +1,33 @@
 import 'package:flutter/material.dart';
 import '../location/nearby_friends_page.dart';
 import '../widgets/menu/popup_menu.dart';
+import '../schedule/schedule_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});
+
+  Future<void> _handleLogout(BuildContext context) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Limpiar token y datos de usuario
+      await prefs.remove('token');
+      await prefs.remove('userId');
+
+      if (context.mounted) {
+        Navigator.of(context).pushReplacementNamed('/');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al cerrar sesión'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   void handleMenuSelection(BuildContext context, String value) {
     if (value == 'friends') {
@@ -12,8 +36,7 @@ class MainMenuPage extends StatelessWidget {
         MaterialPageRoute(builder: (context) => const NearbyFriendsPage()),
       );
     } else if (value == 'logout') {
-      // Limpiar las credenciales del usuario y redirigir a la pantalla de bienvenida
-      Navigator.of(context).pushReplacementNamed('/welcome');
+      _handleLogout(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Selected: $value')),
@@ -33,7 +56,10 @@ class MainMenuPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('SEMESTER 1',
-                style: TextStyle(color: Color.fromARGB(255, 81, 80, 80), fontSize: 12, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: Color.fromARGB(255, 81, 80, 80),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
             Text('Schedule',
                 style: TextStyle(
                     fontSize: 24,
@@ -50,7 +76,7 @@ class MainMenuPage extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(child: Text('horario')),
+      body: const ScheduleScreen(),
       bottomNavigationBar: BottomNavigationBar(
         onTap: (index) {
           if (index == 2) {

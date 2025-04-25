@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service_adapter.dart';
 import 'package:group33_dart/globals.dart';
+import '../../services/connectivity_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -15,6 +16,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _nameController = TextEditingController();
   late final ApiServiceAdapter _apiService;
+  late final ConnectivityService _connectivityService;
   bool _isLoading = false;
   String _passwordMatchMessage = '';
   static const Color primaryColor = Color(0xFF7D91FA);
@@ -23,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void initState() {
     super.initState();
     _apiService = ApiServiceAdapter(backendUrl: backendUrl);
+    _connectivityService = ConnectivityService();
     // Agregar listeners para verificar las contraseñas en tiempo real
     _passwordController.addListener(_checkPasswords);
     _confirmPasswordController.addListener(_checkPasswords);
@@ -60,6 +63,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty) {
       _showErrorSnackBar('Please fill all required fields');
+      return;
+    }
+
+    // Check connectivity before attempting registration
+    final hasConnection = await _connectivityService.checkConnectivity();
+    if (!hasConnection) {
+      await _connectivityService.showNoInternetDialog(context);
       return;
     }
 
@@ -114,7 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       userId = response["userId"];
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/schedule');
     } catch (e) {
       String errorMessage;
 
@@ -166,59 +176,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Círculos decorativos con tamaño reducido
-          Positioned(
-            right: -50,
-            top: -25,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.7),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned(
-            left: -35,
-            bottom: -50,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                color: const Color(0xFFA5B3FF).withOpacity(0.7),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  // Back button
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios),
-                      color: Colors.grey[800],
-                      onPressed: () => Navigator.pop(context),
-                    ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Stack(
+            children: [
+              // Círculos decorativos
+              Positioned(
+                right: -screenWidth * 0.25,
+                top: -screenHeight * 0.1,
+                child: Container(
+                  width: screenWidth * 0.8,
+                  height: screenWidth * 0.8,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.7),
+                    shape: BoxShape.circle,
                   ),
-                  // Logo and title section
-                  Flexible(
-                    flex: 2,
-                    child: Column(
+                ),
+              ),
+              Positioned(
+                left: -screenWidth * 0.2,
+                bottom: -screenHeight * 0.15,
+                child: Container(
+                  width: screenWidth * 0.7,
+                  height: screenWidth * 0.7,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFA5B3FF).withOpacity(0.7),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              // Contenido principal
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 16),
+                    // Back button
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios),
+                        color: Colors.grey[800],
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Logo and title section
+                    Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
                           "Uni",
                           style: TextStyle(
-                            fontSize: 48,
+                            fontSize: 24,
                             fontWeight: FontWeight.w300,
                             fontFamily: 'SmoochSans',
                           ),
@@ -226,7 +242,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const Text(
                           "Verse",
                           style: TextStyle(
-                            fontSize: 48,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: primaryColor,
                             fontFamily: 'SmoochSans',
@@ -235,16 +251,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 10),
                         const Image(
                           image: AssetImage('assets/logos/logo.png'),
-                          height: 80,
+                          height: 50,
                         ),
                       ],
                     ),
-                  ),
-                  // Form section
-                  Flexible(
-                    flex: 4,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    const SizedBox(height: 16),
+                    // Form section
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         buildInputField(
@@ -252,16 +266,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _nameController,
                           false,
                         ),
+                        const SizedBox(height: 8),
                         buildInputField(
                           "Email",
                           _emailController,
                           false,
                         ),
+                        const SizedBox(height: 8),
                         buildInputField(
                           "Password",
                           _passwordController,
                           true,
                         ),
+                        const SizedBox(height: 8),
                         buildInputField(
                           "Confirm Password",
                           _confirmPasswordController,
@@ -283,11 +300,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                       ],
                     ),
-                  ),
-                  // Button section
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: ElevatedButton(
+                    const SizedBox(height: 32),
+                    // Button section
+                    ElevatedButton(
                       onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 45),
@@ -308,18 +323,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : const Text(
                               "Sign up",
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 fontFamily: 'Montserrat',
                               ),
                             ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -336,7 +352,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             color: Colors.grey[600],
             fontFamily: 'Montserrat',
@@ -348,7 +364,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           style: const TextStyle(
             fontFamily: 'Montserrat',
             fontWeight: FontWeight.w600,
-            fontSize: 16,
+            fontSize: 12,
           ),
           decoration: InputDecoration(
             isDense: true,
