@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:group33_dart/presentation/widgets/friends/friend.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
 import '../../globals.dart';
 
@@ -19,6 +21,15 @@ class _AddFriendState extends State<AddFriend> {
   String _message = '';
   bool _isLoading = false;
 
+  Future<bool> hasInternetConnection() async {
+    try {
+      final result = await InternetAddress.lookup('example.com');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _sendRequest() async {
     setState(() {
       _isLoading = true;
@@ -31,6 +42,30 @@ class _AddFriendState extends State<AddFriend> {
       if (receiverEmail.isEmpty) {
         setState(() {
           _message = 'Please enter a valid email.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final hasConnection = await hasInternetConnection();
+      if (!hasConnection) {
+        setState(() {
+          _message = 'No internet connection. Try again once connected';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Revisar si ya es amiga
+      final nearbyFriendsData = await apiServiceAdapter.fetchNearbyFriendsHttp(widget.userId);
+      final existingFriends = nearbyFriendsData
+          .map((json) => Friend.fromJson(json))
+          .where((friend) => friend.email.toLowerCase() == receiverEmail.toLowerCase())
+          .toList();
+
+      if (existingFriends.isNotEmpty) {
+        setState(() {
+          _message = 'You are already friends with this person.';
           _isLoading = false;
         });
         return;
@@ -120,7 +155,9 @@ class _AddFriendState extends State<AddFriend> {
               Text(
                 _message,
                 style: TextStyle(
-                  color: _message.contains('Failed') ? Colors.red : Colors.green,
+                  color: _message.contains('Failed') || _message.contains('No internet')
+                      ? Colors.red
+                      : Colors.green,
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,

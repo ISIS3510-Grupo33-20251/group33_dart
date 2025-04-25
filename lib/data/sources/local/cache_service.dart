@@ -35,4 +35,30 @@ class CacheService {
   Future<void> removeCachedFlashcard(String key) async {
     await _cache.removeFile(key);
   }
+  Future<void> cacheUserLocation(Map<String, double> location) async {
+  final jsonString = jsonEncode(location);
+  final bytes = Uint8List.fromList(utf8.encode(jsonString));
+  await _cache.putFile(
+    'last_user_location',
+    bytes,
+    fileExtension: 'json',
+  );
+}
+
+Future<Map<String, double>?> loadCachedUserLocation() async {
+  final fileInfo = await _cache.getFileFromCache('last_user_location');
+  if (fileInfo == null) return null;
+
+  try {
+    final jsonString = await fileInfo.file.readAsString();
+    final data = jsonDecode(jsonString);
+    return {
+      'latitude': (data['latitude'] ?? 0.0).toDouble(),
+      'longitude': (data['longitude'] ?? 0.0).toDouble(),
+    };
+  } catch (e) {
+    print('Error loading cached user location: $e');
+    return null;
+  }
+}
 }

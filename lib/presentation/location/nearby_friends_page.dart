@@ -6,10 +6,11 @@ import '../../globals.dart';
 import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
 import 'add_friend_popup.dart';
+import 'package:group33_dart/data/sources/local/cache_service.dart';
 
-final ApiServiceAdapter apiServiceAdapter =
-    ApiServiceAdapter(backendUrl: backendUrl);
-final LocalStorageService_localStorage = LocalStorageService();
+final ApiServiceAdapter apiServiceAdapter = ApiServiceAdapter(backendUrl: backendUrl);
+final LocalStorageService localStorage = LocalStorageService();
+final CacheService cache = CacheService();
 
 class NearbyFriendsPage extends StatefulWidget {
   const NearbyFriendsPage({Key? key}) : super(key: key);
@@ -84,31 +85,65 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
       position.latitude,
       position.longitude,
     );
+    await cache.cacheUserLocation({
+      'latitude': position.latitude,
+      'longitude': position.longitude,
+    });
   }
 
   Future<void> _fetchFriends(Position? userPosition) async {
-    List<dynamic> data = await apiServiceAdapter.fetchNearbyFriendsHttp(userId);
+    try {
+      List<dynamic> data = await apiServiceAdapter.fetchNearbyFriendsHttp(userId);
+      List<Friend> fetchedFriends = data.map((json) => Friend.fromJson(json)).toList();
 
-    List<Friend> fetchedFriends =
-        data.map((json) => Friend.fromJson(json)).toList();
-
-    if (userPosition != null) {
-      for (var friend in fetchedFriends) {
-        friend.distance = Geolocator.distanceBetween(
-              userPosition.latitude,
-              userPosition.longitude,
-              friend.latitude,
-              friend.longitude,
-            );
+      if (userPosition != null) {
+        for (var friend in fetchedFriends) {
+          friend.distance = Geolocator.distanceBetween(
+            userPosition.latitude,
+            userPosition.longitude,
+            friend.latitude,
+            friend.longitude,
+          );
+        }
+        fetchedFriends.sort((a, b) => a.distance.compareTo(b.distance));
       }
 
-      fetchedFriends.sort((a, b) => a.distance.compareTo(b.distance));
-    }
+      await localStorage.saveFriends(data.cast<Map<String, dynamic>>());
 
-    setState(() {
-      friends = fetchedFriends;
-      isLoading = false;
-    });
+      setState(() {
+        friends = fetchedFriends;
+        isLoading = false;
+      });
+    } catch (e) {
+      final cachedLocation = await cache.loadCachedUserLocation();
+      List<Map<String, dynamic>> cached = await localStorage.loadFriends();
+      List<Friend> cachedFriends = cached.map((json) => Friend.fromJson(json)).toList();
+
+      if (cachedLocation != null &&
+          cachedLocation['latitude'] != null &&
+          cachedLocation['longitude'] != null) {
+        final lat = cachedLocation['latitude'] as double;
+        final lon = cachedLocation['longitude'] as double;
+
+        for (var friend in cachedFriends) {
+          friend.distance = Geolocator.distanceBetween(
+            lat,
+            lon,
+            friend.latitude,
+            friend.longitude,
+          );
+        }
+
+        cachedFriends.sort((a, b) => a.distance.compareTo(b.distance));
+      }
+
+      setState(() {
+        friends = cachedFriends;
+        error = 'No internet. Showing cached friends.';
+        isLoading = false;
+        locationPermissionDenied = true;
+      });
+    }
   }
 
   @override
@@ -120,7 +155,9 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
         title: const Text(
           'Friends',
@@ -131,32 +168,25 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black),
-            tooltip: 'Refresh',
-            onPressed: _initialize,
-          ),
           AddFriendPopup(userId: userId),
         ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : error.isNotEmpty
-              ? Center(child: Text(error))
-              : Column(
-                  children: [
-                    if (locationPermissionDenied)
-                      const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: Text(
-                          'Location permission denied. Showing friends without distance.',
-                          style: TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    Expanded(child: FriendList(friends: friends)),
-                  ],
-                ),
+          : Column(
+              children: [
+                if (error.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Text(
+                      error,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                Expanded(child: FriendList(friends: friends)),
+              ],
+            ),
     );
   }
 }
