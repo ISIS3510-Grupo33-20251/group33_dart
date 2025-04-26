@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service_adapter.dart';
 import 'package:group33_dart/globals.dart';
 import '../../services/connectivity_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -121,10 +122,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
         name: name.isEmpty ? null : name,
       );
 
-      userId = response["userId"];
+      // Guardar información del usuario
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', response['token']);
+      await prefs.setString('userId', response['userId']);
+
+      // Actualizar variables globales
+      userId = response['userId'];
+      token = response['token'];
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/schedule');
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registration successful!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Navegar al home después de un breve delay
+      await Future.delayed(const Duration(seconds: 1));
+
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
     } catch (e) {
       String errorMessage;
 
