@@ -283,16 +283,10 @@ class ApiServiceAdapter {
   // Meetings endpoints
   Future<Map<String, dynamic>> createMeeting(
       Map<String, dynamic> meetingData) async {
-    print('Creating meeting with data: $meetingData');
-
-    final response = await http.post(
-      Uri.parse('$backendUrl/meetings'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: json.encode({
-        '_id': const Uuid().v4(), // Generando un nuevo ID único
+    try {
+      // Imprimir el JSON que se va a enviar
+      String jsonString = json.encode({
+        '_id': meetingData['_id'],
         'title': meetingData['title'],
         'description': meetingData['description'],
         'start_time': meetingData['start_time'],
@@ -301,18 +295,36 @@ class ApiServiceAdapter {
         'meeting_link': meetingData['meeting_link'],
         'host_id': meetingData['host_id'],
         'participants': meetingData['participants'] ?? [],
-        'color': meetingData['color'],
-        'day_of_week': meetingData['day_of_week'],
-      }),
-    );
+      });
 
-    print('Create meeting response status: ${response.statusCode}');
-    print('Create meeting response body: ${response.body}');
+      // Crear la URL
+      final url = Uri.parse('$backendUrl/meetings/');
+      print('Sending request to: $url'); // Imprimir la URL
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return json.decode(response.body);
+      // Imprimir el comando curl
+      print(
+          'curl -X POST $url -H "Content-Type: application/json" -d \'$jsonString\'');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: jsonString,
+      );
+
+      print('Create meeting response status: ${response.statusCode}');
+      print('Create meeting response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      }
+      throw Exception('Failed to create meeting: ${response.body}');
+    } catch (e) {
+      print('Error creating meeting: $e');
+      throw Exception('Failed to create meeting: $e');
     }
-    throw Exception('Failed to create meeting: ${response.body}');
   }
 
   Future<void> deleteMeeting(String meetingId) async {

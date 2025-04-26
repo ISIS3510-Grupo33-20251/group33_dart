@@ -138,7 +138,6 @@ class ScheduleService extends ChangeNotifier {
           name: meeting['name'],
           professor: meeting['professor'] ?? '',
           room: meeting['room'] ?? '',
-          dayOfWeek: int.parse(meeting['day_of_week'].toString()),
           startTime: _parseTimeOfDay(meeting['start_time']),
           endTime: _parseTimeOfDay(meeting['end_time']),
           color: Color(int.parse(meeting['color'] ?? '0xFFFF5252')),
@@ -303,10 +302,11 @@ class ScheduleService extends ChangeNotifier {
         name: meetingData['title'],
         professor: meetingData['description'] ?? '',
         room: meetingData['location'] ?? '',
-        dayOfWeek: int.parse(meetingData['day_of_week']),
+        dayOfWeek: _getDayOfWeekFromDateTime(
+            DateTime.parse(meetingData['start_time'])),
         startTime: _parseTimeFromDateTime(meetingData['start_time']),
         endTime: _parseTimeFromDateTime(meetingData['end_time']),
-        color: Color(int.parse(meetingData['color'])),
+        color: Colors.blue,
       );
 
       // Guardar localmente
@@ -318,6 +318,12 @@ class ScheduleService extends ChangeNotifier {
       print('Error creating meeting: $e');
       throw Exception('Failed to create meeting: $e');
     }
+  }
+
+  int _getDayOfWeekFromDateTime(DateTime dateTime) {
+    // Convertir de DateTime (1-7, Lun-Dom) a nuestro formato (0-4, Lun-Vie)
+    int day = dateTime.weekday - 1;
+    return day >= 5 ? 0 : day; // Si es fin de semana, asignar al lunes
   }
 
   TimeOfDay _parseTimeFromDateTime(String dateTimeString) {

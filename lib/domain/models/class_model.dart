@@ -34,7 +34,7 @@ class ClassModel {
     required this.name,
     required this.professor,
     required this.room,
-    required this.dayOfWeek,
+    this.dayOfWeek = 0,
     required this.startTime,
     required this.endTime,
     required this.color,

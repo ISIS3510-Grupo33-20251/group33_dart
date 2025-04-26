@@ -537,6 +537,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 );
 
                 final meetingData = {
+                  '_id': DateTime.now().millisecondsSinceEpoch.toString(),
                   'title': title,
                   'description': _descriptionController.text.trim(),
                   'start_time': startDateTime.toIso8601String(),
@@ -544,8 +545,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   'location': _locationController.text.trim(),
                   'meeting_link': _meetingLinkController.text.trim(),
                   'host_id': userId, // from globals.dart
-                  'color': _selectedColor.value.toString(),
-                  'day_of_week': _selectedDay.toString(),
+                  'participants': [],
                 };
 
                 try {
