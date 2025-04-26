@@ -54,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response != null) {
         userId = response['userId'];
+        token = response['token'];
 
         // The ScheduleService constructor automatically initializes the schedule
         // when userId is set, so we don't need to do anything extra here

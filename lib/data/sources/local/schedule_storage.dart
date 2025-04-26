@@ -2,9 +2,10 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/material.dart';
 import '../../../domain/models/class_model.dart';
-import '../../../domain/models/friend_model.dart';
+import '../../../domain/models/friend.dart';
 import '../../adapters/time_of_day_adapter.dart';
 import '../../adapters/color_adapter.dart';
+import '../../adapters/friend_adapter.dart' as friend_adapter;
 
 class ScheduleStorage {
   static const String _boxName = 'schedule_box';
@@ -26,7 +27,7 @@ class ScheduleStorage {
       Hive.registerAdapter(ColorAdapter());
     }
     if (!Hive.isAdapterRegistered(3)) {
-      Hive.registerAdapter(FriendModelAdapter());
+      Hive.registerAdapter(friend_adapter.FriendAdapter());
     }
 
     _box = await Hive.openBox(_boxName);
@@ -62,15 +63,15 @@ class ScheduleStorage {
   }
 
   // Friend methods
-  Future<void> saveFriends(List<FriendModel> friends) async {
+  Future<void> saveFriends(List<Friend> friends) async {
     await _box.put(_friendsKey, friends);
   }
 
-  List<FriendModel> getFriends() {
-    return (_box.get(_friendsKey) as List?)?.cast<FriendModel>() ?? [];
+  List<Friend> getFriends() {
+    return (_box.get(_friendsKey) as List?)?.cast<Friend>() ?? [];
   }
 
-  Future<void> addFriend(FriendModel friend) async {
+  Future<void> addFriend(Friend friend) async {
     final friends = getFriends();
     if (!friends.any((f) => f.email == friend.email)) {
       friends.add(friend);
@@ -85,15 +86,15 @@ class ScheduleStorage {
   }
 
   // Pending friend requests
-  Future<void> savePendingFriends(List<FriendModel> pendingFriends) async {
+  Future<void> savePendingFriends(List<Friend> pendingFriends) async {
     await _box.put(_pendingFriendsKey, pendingFriends);
   }
 
-  List<FriendModel> getPendingFriends() {
-    return (_box.get(_pendingFriendsKey) as List?)?.cast<FriendModel>() ?? [];
+  List<Friend> getPendingFriends() {
+    return (_box.get(_pendingFriendsKey) as List?)?.cast<Friend>() ?? [];
   }
 
-  Future<void> addPendingFriend(FriendModel friend) async {
+  Future<void> addPendingFriend(Friend friend) async {
     final pendingFriends = getPendingFriends();
     if (!pendingFriends.any((f) => f.email == friend.email)) {
       pendingFriends.add(friend);

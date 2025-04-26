@@ -9,6 +9,7 @@ import 'presentation/auth/register_screen.dart';
 import 'presentation/auth/welcome_screen.dart';
 import 'presentation/flashcards/screen_flashcards.dart';
 import 'presentation/notes/screen_notes.dart';
+import 'presentation/schedule/schedule_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,7 @@ class MainApp extends StatelessWidget {
           '/home': (context) => const MainMenuPage(),
           '/flashcards': (context) => const ScreenFlashcard(),
           '/notes': (context) => const ScreenNotes(),
+          '/schedule': (context) => const ScheduleScreen(),
         },
       ),
     );

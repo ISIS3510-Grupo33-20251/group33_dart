@@ -48,6 +48,7 @@ class ScheduleService extends ChangeNotifier {
         _scheduleId = await _storage.getScheduleId();
         if (_scheduleId != null) {
           await prefs.setString(_scheduleIdKey, _scheduleId!);
+          await _storage.saveScheduleId(_scheduleId!);
           print('Saved scheduleId to SharedPreferences: $_scheduleId');
         }
       }
@@ -103,7 +104,7 @@ class ScheduleService extends ChangeNotifier {
         // Guardar el scheduleId en SharedPreferences y storage local
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_scheduleIdKey, _scheduleId!);
-        await _storage.saveScheduleId(_scheduleId);
+        await _storage.saveScheduleId(_scheduleId!);
       }
 
       // Verificar si necesitamos sincronizar las clases
