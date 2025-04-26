@@ -1,138 +1,113 @@
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/material.dart';
 import '../../../domain/models/class_model.dart';
+import '../../../domain/models/friend_model.dart';
 import '../../adapters/time_of_day_adapter.dart';
 import '../../adapters/color_adapter.dart';
 
 class ScheduleStorage {
-  static const String _scheduleBox = 'schedule_box';
+  static const String _boxName = 'schedule_box';
   static const String _scheduleIdKey = 'schedule_id';
   static const String _classesKey = 'classes';
-  Box? _box;
+  static const String _friendsKey = 'friends';
+  static const String _pendingFriendsKey = 'pending_friends';
+
+  late Box _box;
 
   Future<void> initialize() async {
-    try {
-      // Inicializar Hive si no está inicializado
-      if (!Hive.isBoxOpen(_scheduleBox)) {
-        await Hive.initFlutter();
-      }
+    await Hive.initFlutter();
 
-      // Registrar adaptadores
-      if (!Hive.isAdapterRegistered(0)) {
-        Hive.registerAdapter(ClassModelAdapter());
-      }
-      if (!Hive.isAdapterRegistered(1)) {
-        Hive.registerAdapter(TimeOfDayAdapter());
-      }
-      if (!Hive.isAdapterRegistered(2)) {
-        Hive.registerAdapter(ColorAdapter());
-      }
-
-      // Abrir el box
-      _box = await Hive.openBox(_scheduleBox);
-      print('Hive box opened successfully');
-    } catch (e) {
-      print('Error initializing Hive: $e');
-      rethrow;
+    // Register adapters
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(TimeOfDayAdapter());
     }
+    if (!Hive.isAdapterRegistered(2)) {
+      Hive.registerAdapter(ColorAdapter());
+    }
+    if (!Hive.isAdapterRegistered(3)) {
+      Hive.registerAdapter(FriendModelAdapter());
+    }
+
+    _box = await Hive.openBox(_boxName);
   }
 
-  Future<void> saveScheduleId(String? scheduleId) async {
-    try {
-      if (_box == null) {
-        await initialize();
-      }
-      await _box!.put(_scheduleIdKey, scheduleId);
-      print('Schedule ID saved: $scheduleId');
-    } catch (e) {
-      print('Error saving schedule ID: $e');
-      rethrow;
-    }
+  // Schedule methods
+  Future<void> saveScheduleId(String id) async {
+    await _box.put(_scheduleIdKey, id);
   }
 
-  Future<String?> getScheduleId() async {
-    try {
-      if (_box == null) {
-        await initialize();
-      }
-      final id = _box!.get(_scheduleIdKey) as String?;
-      print('Retrieved schedule ID: $id');
-      return id;
-    } catch (e) {
-      print('Error getting schedule ID: $e');
-      return null;
-    }
+  String? getScheduleId() {
+    return _box.get(_scheduleIdKey);
   }
 
   Future<void> saveClasses(List<ClassModel> classes) async {
-    try {
-      if (_box == null) {
-        await initialize();
-      }
-      await _box!.put(_classesKey, classes);
-      print('Saved ${classes.length} classes to local storage');
-    } catch (e) {
-      print('Error saving classes: $e');
-      rethrow;
-    }
+    await _box.put(_classesKey, classes);
   }
 
-  Future<List<ClassModel>> getClasses() async {
-    try {
-      if (_box == null) {
-        await initialize();
-      }
-      final classes =
-          _box!.get(_classesKey, defaultValue: <ClassModel>[]) as List;
-      final result = List<ClassModel>.from(classes);
-      print('Retrieved ${result.length} classes from local storage');
-      return result;
-    } catch (e) {
-      print('Error getting classes: $e');
-      return [];
-    }
+  List<ClassModel> getClasses() {
+    return (_box.get(_classesKey) as List?)?.cast<ClassModel>() ?? [];
   }
 
   Future<void> addClass(ClassModel classModel) async {
-    try {
-      if (_box == null) {
-        await initialize();
-      }
-      final classes = await getClasses();
-      classes.add(classModel);
-      await saveClasses(classes);
-      print('Added class to local storage: ${classModel.name}');
-    } catch (e) {
-      print('Error adding class: $e');
-      rethrow;
+    final classes = getClasses();
+    classes.add(classModel);
+    await saveClasses(classes);
+  }
+
+  Future<void> removeClass(String classId) async {
+    final classes = getClasses();
+    classes.removeWhere((c) => c.id == classId);
+    await saveClasses(classes);
+  }
+
+  // Friend methods
+  Future<void> saveFriends(List<FriendModel> friends) async {
+    await _box.put(_friendsKey, friends);
+  }
+
+  List<FriendModel> getFriends() {
+    return (_box.get(_friendsKey) as List?)?.cast<FriendModel>() ?? [];
+  }
+
+  Future<void> addFriend(FriendModel friend) async {
+    final friends = getFriends();
+    if (!friends.any((f) => f.email == friend.email)) {
+      friends.add(friend);
+      await saveFriends(friends);
     }
   }
 
-  Future<void> removeClass(String id) async {
-    try {
-      if (_box == null) {
-        await initialize();
-      }
-      final classes = await getClasses();
-      classes.removeWhere((c) => c.id == id);
-      await saveClasses(classes);
-      print('Removed class from local storage: $id');
-    } catch (e) {
-      print('Error removing class: $e');
-      rethrow;
+  Future<void> removeFriend(String email) async {
+    final friends = getFriends();
+    friends.removeWhere((f) => f.email == email);
+    await saveFriends(friends);
+  }
+
+  // Pending friend requests
+  Future<void> savePendingFriends(List<FriendModel> pendingFriends) async {
+    await _box.put(_pendingFriendsKey, pendingFriends);
+  }
+
+  List<FriendModel> getPendingFriends() {
+    return (_box.get(_pendingFriendsKey) as List?)?.cast<FriendModel>() ?? [];
+  }
+
+  Future<void> addPendingFriend(FriendModel friend) async {
+    final pendingFriends = getPendingFriends();
+    if (!pendingFriends.any((f) => f.email == friend.email)) {
+      pendingFriends.add(friend);
+      await savePendingFriends(pendingFriends);
     }
+  }
+
+  Future<void> removePendingFriend(String email) async {
+    final pendingFriends = getPendingFriends();
+    pendingFriends.removeWhere((f) => f.email == email);
+    await savePendingFriends(pendingFriends);
   }
 
   Future<void> clear() async {
-    try {
-      if (_box == null) {
-        await initialize();
-      }
-      await _box!.clear();
-      print('Local storage cleared');
-    } catch (e) {
-      print('Error clearing storage: $e');
-      rethrow;
-    }
+    await _box.clear();
   }
 }

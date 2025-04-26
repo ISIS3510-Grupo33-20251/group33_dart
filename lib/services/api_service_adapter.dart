@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
+import '../domain/models/friend.dart';
 
 class ApiServiceAdapter {
   final String backendUrl;
@@ -278,108 +280,96 @@ class ApiServiceAdapter {
     }
   }
 
-  // Schedule endpoints
-  Future<List<Map<String, dynamic>>> getSchedules() async {
-    final response = await http.get(
-      Uri.parse('$backendUrl/schedules/'),
-      headers: {'Content-Type': 'application/json'},
-    );
-    if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(json.decode(response.body));
-    } else {
-      throw Exception('Failed to fetch schedules');
-    }
-  }
-
-  Future<Map<String, dynamic>> createSchedule(String userId) async {
-    print(
-        'Creating schedule for user $userId at endpoint: $backendUrl/schedules/');
-
-    // Generar un ID único para el schedule
-    final scheduleId = DateTime.now().millisecondsSinceEpoch.toString();
-
-    final body = {"_id": scheduleId, "user_id": userId, "meetings": []};
-
-    print('Request body: ${json.encode(body)}');
+  // Meetings endpoints
+  Future<Map<String, dynamic>> createMeeting(
+      Map<String, dynamic> meetingData) async {
+    print('Creating meeting with data: $meetingData');
 
     final response = await http.post(
-      Uri.parse('$backendUrl/schedules/'),
+      Uri.parse('$backendUrl/meetings'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: json.encode(body),
+      body: json.encode({
+        '_id': const Uuid().v4(), // Generando un nuevo ID único
+        'title': meetingData['title'],
+        'description': meetingData['description'],
+        'start_time': meetingData['start_time'],
+        'end_time': meetingData['end_time'],
+        'location': meetingData['location'],
+        'meeting_link': meetingData['meeting_link'],
+        'host_id': meetingData['host_id'],
+        'participants': meetingData['participants'] ?? [],
+        'color': meetingData['color'],
+        'day_of_week': meetingData['day_of_week'],
+      }),
     );
 
-    print('Response status: ${response.statusCode}');
-    print('Response body: ${response.body}');
+    print('Create meeting response status: ${response.statusCode}');
+    print('Create meeting response body: ${response.body}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return json.decode(response.body);
-    } else {
-      throw Exception(
-          'Failed to create schedule. Status: ${response.statusCode}, Body: ${response.body}');
     }
+    throw Exception('Failed to create meeting: ${response.body}');
   }
 
-  Future<Map<String, dynamic>> getSchedule(String scheduleId) async {
-    final response = await http.get(
-      Uri.parse('$backendUrl/schedules/$scheduleId'),
-      headers: {'Content-Type': 'application/json'},
-    );
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to fetch schedule');
-    }
-  }
-
-  Future<void> updateSchedule(
-      String scheduleId, List<Map<String, dynamic>> meetings) async {
-    final response = await http.put(
-      Uri.parse('$backendUrl/schedules/$scheduleId'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'meetings': meetings,
-      }),
-    );
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update schedule');
-    }
-  }
-
-  Future<void> deleteSchedule(String scheduleId) async {
+  Future<void> deleteMeeting(String meetingId) async {
     final response = await http.delete(
-      Uri.parse('$backendUrl/schedules/$scheduleId'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('$backendUrl/meetings/$meetingId'),
     );
+
     if (response.statusCode != 200) {
-      throw Exception('Failed to delete schedule');
+      throw Exception('Failed to delete meeting: ${response.body}');
     }
+  }
+
+  // Schedule endpoints
+  Future<List<Map<String, dynamic>>> getSchedules() async {
+    final response = await http.get(Uri.parse('$backendUrl/schedules/'));
+
+    if (response.statusCode == 200) {
+      List<dynamic> schedules = json.decode(response.body);
+      return schedules.cast<Map<String, dynamic>>();
+    }
+    throw Exception('Failed to get schedules: ${response.body}');
+  }
+
+  Future<Map<String, dynamic>> createSchedule(
+      Map<String, dynamic> scheduleData) async {
+    final response = await http.post(
+      Uri.parse('$backendUrl/schedules/'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(scheduleData),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return json.decode(response.body);
+    }
+    throw Exception('Failed to create schedule: ${response.body}');
   }
 
   Future<List<Map<String, dynamic>>> getScheduleMeetings(
       String scheduleId) async {
     final response = await http.get(
       Uri.parse('$backendUrl/schedules/$scheduleId/meetings'),
-      headers: {'Content-Type': 'application/json'},
     );
+
     if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(json.decode(response.body));
-    } else {
-      throw Exception('Failed to fetch meetings');
+      List<dynamic> meetings = json.decode(response.body);
+      return meetings.cast<Map<String, dynamic>>();
     }
+    throw Exception('Failed to get schedule meetings: ${response.body}');
   }
 
-  Future<void> addMeetingToSchedule(
-      String scheduleId, Map<String, dynamic> meeting) async {
+  Future<void> addMeetingToSchedule(String scheduleId, String meetingId) async {
     final response = await http.post(
-      Uri.parse('$backendUrl/schedules/$scheduleId/meetings'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(meeting),
+      Uri.parse('$backendUrl/schedules/$scheduleId/meetings/$meetingId'),
     );
+
     if (response.statusCode != 200) {
-      throw Exception('Failed to add meeting');
+      throw Exception('Failed to add meeting to schedule: ${response.body}');
     }
   }
 
@@ -387,11 +377,71 @@ class ApiServiceAdapter {
       String scheduleId, String meetingId) async {
     final response = await http.delete(
       Uri.parse('$backendUrl/schedules/$scheduleId/meetings/$meetingId'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+          'Failed to remove meeting from schedule: ${response.body}');
+    }
+  }
+
+  // Nuevo método para obtener la lista de amigos
+  Future<List<Friend>> getFriendsList(String userId) async {
+    final response = await http.get(
+      Uri.parse('$backendUrl/users/$userId/friends'),
       headers: {'Content-Type': 'application/json'},
     );
-    if (response.statusCode != 200) {
-      throw Exception('Failed to remove meeting');
+
+    if (response.statusCode == 200) {
+      List<dynamic> friendsJson = json.decode(response.body);
+      return friendsJson.map((json) => Friend.fromJson(json)).toList();
     }
+    throw Exception('Failed to get friends list: ${response.body}');
+  }
+
+  // Nuevo método para añadir participantes a una reunión
+  Future<void> addParticipantsToMeeting(
+      String meetingId, List<String> participantIds) async {
+    final response = await http.post(
+      Uri.parse('$backendUrl/meetings/$meetingId/participants'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'participant_ids': participantIds,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+          'Failed to add participants to meeting: ${response.body}');
+    }
+  }
+
+  // Nuevo método para remover participantes de una reunión
+  Future<void> removeParticipantFromMeeting(
+      String meetingId, String participantId) async {
+    final response = await http.delete(
+      Uri.parse('$backendUrl/meetings/$meetingId/participants/$participantId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+          'Failed to remove participant from meeting: ${response.body}');
+    }
+  }
+
+  // Nuevo método para obtener los participantes de una reunión
+  Future<List<Friend>> getMeetingParticipants(String meetingId) async {
+    final response = await http.get(
+      Uri.parse('$backendUrl/meetings/$meetingId/participants'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> participantsJson = json.decode(response.body);
+      return participantsJson.map((json) => Friend.fromJson(json)).toList();
+    }
+    throw Exception('Failed to get meeting participants: ${response.body}');
   }
 }
 
