@@ -18,9 +18,9 @@ class ConnectivityService {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Sin conexión a Internet'),
+          title: const Text('No Internet connection'),
           content: const Text(
-              'Por favor verifica tu conexión a Internet e intenta nuevamente.'),
+              'Please check your Internet connection and try again.'),
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
