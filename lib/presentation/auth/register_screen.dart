@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service_adapter.dart';
 import 'package:group33_dart/globals.dart';
 import '../../services/connectivity_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -115,17 +116,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _apiService.register(
+      print('Starting registration process...');
+      // First register the user
+      final registerResponse = await _apiService.register(
         email,
         password,
         name: name.isEmpty ? null : name,
       );
+      print('Registration successful: $registerResponse');
 
-      userId = response["userId"];
+      // Then immediately login with the same credentials
+      print('Attempting login after registration...');
+      final loginResponse = await _apiService.login(email, password);
+      print('Login successful: $loginResponse');
+
+      // Save login data
+      userId = loginResponse["userId"];
+      token = loginResponse['token'];
+      print('Saved userId: $userId and token: $token');
+
+      // Save to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
+      await prefs.setString('userId', userId);
+      print('Saved credentials to SharedPreferences');
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/schedule');
+      print('Navigating to home screen...');
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
+      print('Error in registration/login process: $e');
       String errorMessage;
 
       if (e.toString().contains("email already exists") ||
@@ -138,6 +158,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         errorMessage = "An unexpected error occurred. Please try again.";
       }
 
+      print('Showing error message: $errorMessage');
       _showErrorSnackBar(errorMessage);
     } finally {
       setState(() => _isLoading = false);

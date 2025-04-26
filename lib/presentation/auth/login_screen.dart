@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   late final ApiServiceAdapter _apiService;
   late final ConnectivityService _connectivityService;
+  late final ScheduleService _scheduleService;
   bool _isLoading = false;
   static const Color primaryColor = Color(0xFF7D91FA);
 
@@ -27,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _apiService = ApiServiceAdapter(backendUrl: backendUrl);
     _connectivityService = ConnectivityService();
+    _scheduleService = ScheduleService();
   }
 
   Future<void> _login() async {
@@ -51,9 +53,13 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (response != null) {
-        userId = response["userId"];
-        if (!context.mounted) return;
+        userId = response['userId'];
+        token = response['token'];
 
+        // The ScheduleService constructor automatically initializes the schedule
+        // when userId is set, so we don't need to do anything extra here
+
+        if (!context.mounted) return;
         Navigator.pushReplacementNamed(context, '/home');
       } else {
         _showErrorSnackBar('Invalid email or password');

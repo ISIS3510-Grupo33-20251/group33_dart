@@ -14,14 +14,14 @@ class ScheduleScreen extends StatefulWidget {
 }
 
 class _ScheduleScreenState extends State<ScheduleScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _professorController = TextEditingController();
-  final TextEditingController _roomController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _meetingLinkController = TextEditingController();
   TimeOfDay _startTime = const TimeOfDay(hour: 7, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 8, minute: 0);
   int _selectedDay = 0;
   Color _selectedColor = ScheduleService.classColors[0];
-  ClassModel? _editingClass;
   Timer? _timer;
   DateTime _now = DateTime.now();
 
@@ -44,9 +44,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void dispose() {
     _timer?.cancel();
     _timer = null;
-    _nameController.dispose();
-    _professorController.dispose();
-    _roomController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _locationController.dispose();
+    _meetingLinkController.dispose();
     super.dispose();
   }
 
@@ -90,7 +91,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 right: 16,
                 bottom: 16,
                 child: FloatingActionButton(
-                  onPressed: () => _showClassDialog(),
+                  onPressed: () => _showAddDialog(),
                   child: const Icon(Icons.add),
                   backgroundColor: _selectedColor,
                 ),
@@ -306,8 +307,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final scheduleService = context.read<ScheduleService>();
     final classes = scheduleService.getClassesForDayAndHour(dayIndex, hour);
 
-    print(
-        'Building class block for day $dayIndex, hour $hour. Found ${classes.length} classes');
+    // print(
+    //     'Building class block for day $dayIndex, hour $hour. Found ${classes.length} classes');
 
     if (classes.isEmpty) {
       return const SizedBox(
@@ -357,26 +358,235 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
+  void _showAddDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create New'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: const Text('Meeting'),
+              subtitle: const Text('Create a new meeting'),
+              onTap: () {
+                Navigator.pop(context);
+                _showMeetingDialog();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.class_),
+              title: const Text('Class'),
+              subtitle: const Text('Coming soon...'),
+              enabled: false,
+              onTap: null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMeetingDialog() {
+    setState(() {
+      _titleController.clear();
+      _descriptionController.clear();
+      _locationController.clear();
+      _meetingLinkController.clear();
+      _selectedColor = context.read<ScheduleService>().getRandomColor();
+      _startTime = TimeOfDay(hour: _now.hour, minute: 0);
+      _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
+      _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
+    });
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('New Meeting'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _meetingLinkController,
+                  decoration: const InputDecoration(
+                    labelText: 'Meeting Link (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<int>(
+                  value: _selectedDay,
+                  decoration: const InputDecoration(
+                    labelText: 'Day',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('Monday')),
+                    DropdownMenuItem(value: 1, child: Text('Tuesday')),
+                    DropdownMenuItem(value: 2, child: Text('Wednesday')),
+                    DropdownMenuItem(value: 3, child: Text('Thursday')),
+                    DropdownMenuItem(value: 4, child: Text('Friday')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedDay = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.access_time),
+                        label: Text('Start: ${_startTime.format(context)}'),
+                        onPressed: () async {
+                          final TimeOfDay? time = await showTimePicker(
+                            context: context,
+                            initialTime: _startTime,
+                          );
+                          if (time != null) {
+                            setState(() => _startTime = time);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.access_time),
+                        label: Text('End: ${_endTime.format(context)}'),
+                        onPressed: () async {
+                          final TimeOfDay? time = await showTimePicker(
+                            context: context,
+                            initialTime: _endTime,
+                          );
+                          if (time != null) {
+                            setState(() => _endTime = time);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text('Color', style: TextStyle(fontSize: 16)),
+                const SizedBox(height: 8),
+                _buildColorPicker(setState),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final title = _titleController.text.trim();
+                if (title.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Title is required')),
+                  );
+                  return;
+                }
+
+                final startDateTime = DateTime(
+                  _now.year,
+                  _now.month,
+                  _now.day,
+                  _startTime.hour,
+                  _startTime.minute,
+                );
+
+                final endDateTime = DateTime(
+                  _now.year,
+                  _now.month,
+                  _now.day,
+                  _endTime.hour,
+                  _endTime.minute,
+                );
+
+                final meetingData = {
+                  '_id': DateTime.now().millisecondsSinceEpoch.toString(),
+                  'title': title,
+                  'description': _descriptionController.text.trim(),
+                  'start_time': startDateTime.toIso8601String(),
+                  'end_time': endDateTime.toIso8601String(),
+                  'location': _locationController.text.trim(),
+                  'meeting_link': _meetingLinkController.text.trim(),
+                  'host_id': userId, // from globals.dart
+                  'participants': [],
+                };
+
+                try {
+                  await context
+                      .read<ScheduleService>()
+                      .createMeeting(meetingData);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Meeting created successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  print('Error creating meeting: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error creating meeting: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showClassDialog([ClassModel? classToEdit]) {
     setState(() {
-      _editingClass = classToEdit;
-      if (classToEdit != null) {
-        _nameController.text = classToEdit.name;
-        _professorController.text = classToEdit.professor;
-        _roomController.text = classToEdit.room;
-        _selectedColor = classToEdit.color;
-        _startTime = classToEdit.startTime;
-        _endTime = classToEdit.endTime;
-        _selectedDay = classToEdit.dayOfWeek;
-      } else {
-        _nameController.clear();
-        _professorController.clear();
-        _roomController.clear();
-        _selectedColor = context.read<ScheduleService>().getRandomColor();
-        _startTime = TimeOfDay(hour: _now.hour, minute: 0);
-        _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
-        _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
-      }
+      _titleController.clear();
+      _descriptionController.clear();
+      _locationController.clear();
+      _meetingLinkController.clear();
+      _selectedColor = context.read<ScheduleService>().getRandomColor();
+      _startTime = TimeOfDay(hour: _now.hour, minute: 0);
+      _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
+      _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
     });
 
     showDialog(
@@ -390,7 +600,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
-                  controller: _nameController,
+                  controller: _titleController,
                   decoration: const InputDecoration(
                     labelText: 'Class Name',
                     border: OutlineInputBorder(),
@@ -398,7 +608,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: _professorController,
+                  controller: _descriptionController,
                   decoration: const InputDecoration(
                     labelText: 'Professor',
                     border: OutlineInputBorder(),
@@ -406,7 +616,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  controller: _roomController,
+                  controller: _locationController,
                   decoration: const InputDecoration(
                     labelText: 'Room',
                     border: OutlineInputBorder(),
@@ -476,12 +686,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
           ),
           actions: [
-            if (_editingClass != null)
+            if (classToEdit != null)
               TextButton(
                 onPressed: () {
-                  context
-                      .read<ScheduleService>()
-                      .removeClass(_editingClass!.id);
+                  context.read<ScheduleService>().removeClass(classToEdit.id);
                   Navigator.pop(context);
                 },
                 child:
@@ -493,7 +701,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
             TextButton(
               onPressed: () {
-                final name = _nameController.text.trim();
+                final name = _titleController.text.trim();
                 if (name.isEmpty) return;
 
                 print('Creating new class:');
@@ -503,11 +711,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 print('End time: ${_endTime.hour}:${_endTime.minute}');
 
                 final newClass = ClassModel(
-                  id: _editingClass?.id ??
+                  id: classToEdit?.id ??
                       DateTime.now().millisecondsSinceEpoch.toString(),
                   name: name,
-                  professor: _professorController.text.trim(),
-                  room: _roomController.text.trim(),
+                  professor: _descriptionController.text.trim(),
+                  room: _locationController.text.trim(),
                   dayOfWeek: _selectedDay,
                   startTime: _startTime,
                   endTime: _endTime,
@@ -515,8 +723,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 );
 
                 final scheduleService = context.read<ScheduleService>();
-                if (_editingClass != null) {
-                  scheduleService.removeClass(_editingClass!.id);
+                if (classToEdit != null) {
+                  scheduleService.removeClass(classToEdit.id);
                 }
                 try {
                   scheduleService.addClass(newClass);
@@ -538,7 +746,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   );
                 }
               },
-              child: Text(_editingClass == null ? 'Add' : 'Save'),
+              child: Text(classToEdit == null ? 'Add' : 'Save'),
             ),
           ],
         ),

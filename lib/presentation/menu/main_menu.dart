@@ -3,6 +3,9 @@ import '../location/nearby_friends_page.dart';
 import '../widgets/menu/popup_menu.dart';
 import '../schedule/schedule_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../../services/schedule_service.dart';
+import 'package:intl/intl.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});
@@ -44,6 +47,22 @@ class MainMenuPage extends StatelessWidget {
     }
   }
 
+  String _formatLastSyncTime(DateTime? lastSyncTime) {
+    if (lastSyncTime == null) return 'Never synced';
+    final now = DateTime.now();
+    final difference = now.difference(lastSyncTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}h ago';
+    } else {
+      return DateFormat('MMM d, y HH:mm').format(lastSyncTime);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,19 +71,36 @@ class MainMenuPage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('SEMESTER 1',
+            const Text('SEMESTER 1',
                 style: TextStyle(
                     color: Color.fromARGB(255, 81, 80, 80),
                     fontSize: 12,
                     fontWeight: FontWeight.bold)),
-            Text('Schedule',
-                style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black)),
+            Row(
+              children: [
+                const Text('Schedule',
+                    style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black)),
+                const SizedBox(width: 10),
+                Consumer<ScheduleService>(
+                  builder: (context, scheduleService, child) {
+                    return Text(
+                      _formatLastSyncTime(scheduleService.lastSyncTime),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ],
         ),
         actions: [

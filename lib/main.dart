@@ -9,12 +9,30 @@ import 'presentation/auth/register_screen.dart';
 import 'presentation/auth/welcome_screen.dart';
 import 'presentation/flashcards/screen_flashcards.dart';
 import 'presentation/notes/screen_notes.dart';
+import 'presentation/schedule/schedule_screen.dart';
+import 'data/adapters/time_of_day_adapter.dart';
+import 'data/adapters/color_adapter.dart';
+import 'domain/models/class_model.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive
   await Hive.initFlutter();
+
+  // Register all custom adapters
+  Hive.registerAdapter(TimeOfDayAdapter());
+  Hive.registerAdapter(ColorAdapter());
+  Hive.registerAdapter(ClassModelAdapter());
+
+  // Open all boxes you'll need
   await Hive.openBox('storage');
+  await Hive.openBox('scheduleBox');
+  await Hive.openBox('classesBox');
+
+  // Initialize action queue
   ActionQueueManager().init();
+
   runApp(const MainApp());
 }
 
@@ -53,6 +71,7 @@ class MainApp extends StatelessWidget {
           '/home': (context) => const MainMenuPage(),
           '/flashcards': (context) => const ScreenFlashcard(),
           '/notes': (context) => const ScreenNotes(),
+          '/schedule': (context) => const ScheduleScreen(),
         },
       ),
     );
