@@ -85,9 +85,9 @@ class HomeScreen extends StatelessWidget {
                       Text(
                         syncStatus,
                         style: TextStyle(
-                          fontSize: 16,
-                          color: isNeverSynced ? Colors.red : Colors.green,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
+                          color: isNeverSynced ? Colors.red : Colors.green,
                         ),
                       ),
                     ],
