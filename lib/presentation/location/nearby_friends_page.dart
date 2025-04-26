@@ -7,10 +7,12 @@ import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
 import 'add_friend_popup.dart';
 import 'package:group33_dart/data/sources/local/cache_service.dart';
+import 'package:group33_dart/services/connectivity_service.dart';
 
 final ApiServiceAdapter apiServiceAdapter = ApiServiceAdapter(backendUrl: backendUrl);
 final LocalStorageService localStorage = LocalStorageService();
 final CacheService cache = CacheService();
+final ConnectivityService connectivityService = ConnectivityService(); 
 
 class NearbyFriendsPage extends StatefulWidget {
   const NearbyFriendsPage({Key? key}) : super(key: key);
@@ -33,6 +35,11 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
 
   Future<void> _initialize() async {
     try {
+      final hasConnection = await connectivityService.checkConnectivity();
+      if (!hasConnection) {
+        await connectivityService.showNoInternetDialog(context);
+      }
+
       Position? position;
       try {
         position = await _getLocation();
