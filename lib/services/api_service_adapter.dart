@@ -20,7 +20,7 @@ class ApiServiceAdapter {
       }
     }
     // Para producción o casos no manejados, usa localhost
-    return 'http://127.0.0.1:8000/users/auth';
+    return '$backendUrl/users/auth';
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
