@@ -200,6 +200,9 @@ class ApiServiceAdapter {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
+      print('Failed to fetch friends');
+      print(userId);
+      print(response.statusCode);
       throw Exception('Failed to fetch friends');
     }
   }
