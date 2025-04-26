@@ -51,6 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (response != null) {
+        userId = response["userId"];
         if (!context.mounted) return;
 
         Navigator.pushReplacementNamed(context, '/home');

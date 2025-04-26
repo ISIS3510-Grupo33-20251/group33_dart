@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:group33_dart/presentation/widgets/friends/friend.dart';
 import 'package:group33_dart/services/api_service_adapter.dart';
@@ -6,6 +7,15 @@ import '../../globals.dart';
 
 final ApiServiceAdapter apiServiceAdapter =
     ApiServiceAdapter(backendUrl: backendUrl);
+
+
+class _IsolateCheckParams {
+  final SendPort sendPort;
+  final List<dynamic> nearbyFriendsData;
+  final String receiverEmail;
+
+  _IsolateCheckParams(this.sendPort, this.nearbyFriendsData, this.receiverEmail);
+}
 
 class AddFriend extends StatefulWidget {
   final String userId;
@@ -56,14 +66,12 @@ class _AddFriendState extends State<AddFriend> {
         return;
       }
 
-      // Revisar si ya es amiga
       final nearbyFriendsData = await apiServiceAdapter.fetchNearbyFriendsHttp(widget.userId);
-      final existingFriends = nearbyFriendsData
-          .map((json) => Friend.fromJson(json))
-          .where((friend) => friend.email.toLowerCase() == receiverEmail.toLowerCase())
-          .toList();
 
-      if (existingFriends.isNotEmpty) {
+      // uso de Isolate 
+      final isAlreadyFriend = await _checkIfFriendInIsolate(nearbyFriendsData, receiverEmail);
+
+      if (isAlreadyFriend) {
         setState(() {
           _message = 'You are already friends with this person.';
           _isLoading = false;
@@ -85,6 +93,23 @@ class _AddFriendState extends State<AddFriend> {
         _isLoading = false;
       });
     }
+  }
+
+  // isolate
+  Future<bool> _checkIfFriendInIsolate(List<dynamic> nearbyFriendsData, String receiverEmail) async {
+    final p = ReceivePort();
+    await Isolate.spawn<_IsolateCheckParams>(
+      _isolateCheckEntryPoint,
+      _IsolateCheckParams(p.sendPort, nearbyFriendsData, receiverEmail),
+    );
+    return await p.first as bool;
+  }
+  static void _isolateCheckEntryPoint(_IsolateCheckParams params) {
+    final friends = params.nearbyFriendsData.map((json) => Friend.fromJson(json)).toList();
+    final isFriend = friends.any(
+      (friend) => friend.email.toLowerCase() == params.receiverEmail.toLowerCase(),
+    );
+    params.sendPort.send(isFriend);
   }
 
   @override
