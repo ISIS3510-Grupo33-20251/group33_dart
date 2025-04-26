@@ -5,14 +5,22 @@ import '../data/sources/local/schedule_storage.dart';
 import 'api_service_adapter.dart';
 import '../globals.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../core/cache/lru_cache.dart';
 
 class ScheduleService extends ChangeNotifier {
   final ScheduleStorage _storage = ScheduleStorage();
   final ApiServiceAdapter _apiService;
+  final LRUCache<String, DateTime> _syncTimeCache =
+      LRUCache<String, DateTime>(1);
+  static const String _lastSyncKey = 'lastSync';
+
   List<ClassModel> _classes = [];
   String? _scheduleId;
   bool _isInitialized = false;
   static const String _scheduleIdKey = 'schedule_id';
+  Box<dynamic>? _box;
 
   static const List<Color> classColors = [
     Color(0xFFFF5252), // Red
@@ -26,6 +34,8 @@ class ScheduleService extends ChangeNotifier {
   ];
 
   List<ClassModel> get classes => _classes;
+  DateTime? get lastSyncTime => _syncTimeCache.get(_lastSyncKey);
+  String? get scheduleId => _scheduleId;
 
   ScheduleService() : _apiService = ApiServiceAdapter(backendUrl: backendUrl) {
     _initializeSchedule();
@@ -41,6 +51,17 @@ class ScheduleService extends ChangeNotifier {
       // Intentar obtener el scheduleId de SharedPreferences primero
       final prefs = await SharedPreferences.getInstance();
       _scheduleId = prefs.getString(_scheduleIdKey);
+
+      // Recuperar la última hora de sincronización
+      final lastSyncTimeStr = prefs.getString('lastSyncTime');
+      if (lastSyncTimeStr != null) {
+        final timestamp = int.tryParse(lastSyncTimeStr);
+        if (timestamp != null) {
+          _syncTimeCache.put(
+              _lastSyncKey, DateTime.fromMillisecondsSinceEpoch(timestamp));
+        }
+      }
+
       print('Retrieved scheduleId from SharedPreferences: $_scheduleId');
 
       // Si no hay scheduleId en SharedPreferences, intentar obtenerlo del storage local
@@ -120,6 +141,15 @@ class ScheduleService extends ChangeNotifier {
           await _loadMeetings();
         }
       }
+
+      // Update last sync time in both cache and SharedPreferences
+      final now = DateTime.now();
+      _syncTimeCache.put(_lastSyncKey, now);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          'lastSyncTime', now.millisecondsSinceEpoch.toString());
+
+      notifyListeners();
     } catch (e) {
       print('Error during backend sync: $e');
     }
