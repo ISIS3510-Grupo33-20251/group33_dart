@@ -74,28 +74,52 @@ class MainMenuPage extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('SEMESTER 1',
-                style: TextStyle(
-                    color: Color.fromARGB(255, 81, 80, 80),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.only(bottom: 1),
+              child: const Text('SEMESTER 1',
+                  style: TextStyle(
+                      color: Color.fromARGB(255, 81, 80, 80),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold)),
+            ),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Schedule',
                     style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.black)),
-                const SizedBox(width: 10),
                 Consumer<ScheduleService>(
                   builder: (context, scheduleService, child) {
-                    return Text(
-                      _formatLastSyncTime(scheduleService.lastSyncTime),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        fontStyle: FontStyle.italic,
-                      ),
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatLastSyncTime(scheduleService.lastSyncTime),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color.fromARGB(255, 81, 80, 80),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.sync, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () async {
+                            await scheduleService.syncNow();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Schedule synchronized'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
                     );
                   },
                 ),

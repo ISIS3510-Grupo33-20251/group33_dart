@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../core/cache/lru_cache.dart';
+import 'dart:async';
 
 class ScheduleService extends ChangeNotifier {
   final ScheduleStorage _storage = ScheduleStorage();
@@ -15,12 +16,14 @@ class ScheduleService extends ChangeNotifier {
   final LRUCache<String, DateTime> _syncTimeCache =
       LRUCache<String, DateTime>(1);
   static const String _lastSyncKey = 'lastSync';
+  Timer? _syncTimer;
 
   List<ClassModel> _classes = [];
   String? _scheduleId;
   bool _isInitialized = false;
   static const String _scheduleIdKey = 'schedule_id';
   Box<dynamic>? _box;
+  Color? selectedColor;
 
   static const List<Color> classColors = [
     Color(0xFFFF5252), // Red
@@ -39,6 +42,24 @@ class ScheduleService extends ChangeNotifier {
 
   ScheduleService() : _apiService = ApiServiceAdapter(backendUrl: backendUrl) {
     _initializeSchedule();
+    // Iniciar el timer de sincronización
+    _startSyncTimer();
+  }
+
+  void _startSyncTimer() {
+    // Sincronizar cada 5 minutos
+    _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      if (userId.isNotEmpty) {
+        _syncWithBackend();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    super.dispose();
   }
 
   Future<void> _initializeSchedule() async {
@@ -112,6 +133,52 @@ class ScheduleService extends ChangeNotifier {
         if (userSchedule.isNotEmpty) {
           _scheduleId = userSchedule['_id'];
           print('Found existing schedule in backend with ID: $_scheduleId');
+
+          // Cargar las clases del horario existente
+          final backendClasses =
+              await _apiService.getScheduleMeetings(_scheduleId!);
+          print('Found ${backendClasses.length} classes in backend');
+
+          // Si hay clases locales, verificar si hay conflictos
+          if (_classes.isNotEmpty) {
+            print('Merging local and backend classes...');
+            // Crear un mapa de clases locales por ID
+            final localClassesMap =
+                Map.fromEntries(_classes.map((c) => MapEntry(c.id, c)));
+
+            // Actualizar o agregar clases del backend
+            for (var meeting in backendClasses) {
+              final classId = meeting['_id'];
+              if (localClassesMap.containsKey(classId)) {
+                // Actualizar clase existente
+                localClassesMap[classId] = ClassModel(
+                  id: classId,
+                  name: meeting['title'] ?? meeting['name'] ?? 'Untitled',
+                  professor:
+                      meeting['description'] ?? meeting['professor'] ?? '',
+                  room: meeting['location'] ?? meeting['room'] ?? '',
+                  startTime: _parseTimeOfDay(meeting['start_time']),
+                  endTime: _parseTimeOfDay(meeting['end_time']),
+                  color: Color(int.parse(meeting['color'] ?? '0xFFFF5252')),
+                );
+              } else {
+                // Agregar nueva clase
+                _classes.add(ClassModel(
+                  id: classId,
+                  name: meeting['title'] ?? meeting['name'] ?? 'Untitled',
+                  professor:
+                      meeting['description'] ?? meeting['professor'] ?? '',
+                  room: meeting['location'] ?? meeting['room'] ?? '',
+                  startTime: _parseTimeOfDay(meeting['start_time']),
+                  endTime: _parseTimeOfDay(meeting['end_time']),
+                  color: Color(int.parse(meeting['color'] ?? '0xFFFF5252')),
+                ));
+              }
+            }
+          } else {
+            // Si no hay clases locales, cargar todas del backend
+            await _loadMeetings();
+          }
         } else {
           print('No schedule found in backend, creating new one...');
           final newSchedule = await _apiService.createSchedule({
@@ -120,36 +187,82 @@ class ScheduleService extends ChangeNotifier {
           });
           _scheduleId = newSchedule['_id'];
           print('Created new schedule with ID: $_scheduleId');
+
+          // Si hay clases locales, subirlas al backend
+          if (_classes.isNotEmpty) {
+            print('Uploading local classes to new schedule...');
+            for (var classModel in _classes) {
+              final meetingModel = MeetingModel(
+                name: classModel.name,
+                professor: classModel.professor,
+                room: classModel.room,
+                dayOfWeek: classModel.dayOfWeek,
+                startTime: classModel.startTime,
+                endTime: classModel.endTime,
+                color: classModel.color,
+              );
+
+              final createdMeeting =
+                  await _apiService.createMeeting(meetingModel.toJson());
+              await _apiService.addMeetingToSchedule(
+                  _scheduleId!, createdMeeting['_id']);
+            }
+          }
         }
 
         // Guardar el scheduleId en SharedPreferences y storage local
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_scheduleIdKey, _scheduleId!);
         await _storage.saveScheduleId(_scheduleId!);
-      }
-
-      // Verificar si necesitamos sincronizar las clases
-      if (_classes.isEmpty) {
-        print('No local classes found, loading from backend...');
-        await _loadMeetings();
       } else {
-        print('Local classes found, checking for updates...');
+        // Si ya tenemos un scheduleId, verificar si hay actualizaciones
+        print('Checking for schedule updates...');
         final backendClasses =
             await _apiService.getScheduleMeetings(_scheduleId!);
+
+        // Verificar si hay diferencias en las clases
         if (backendClasses.length != _classes.length) {
           print('Class count mismatch, updating from backend...');
           await _loadMeetings();
+        } else {
+          // Verificar si hay cambios en las clases existentes
+          final localClassesMap =
+              Map.fromEntries(_classes.map((c) => MapEntry(c.id, c)));
+
+          bool hasChanges = false;
+          for (var meeting in backendClasses) {
+            final classId = meeting['_id'];
+            if (localClassesMap.containsKey(classId)) {
+              final localClass = localClassesMap[classId]!;
+              if (localClass.name != (meeting['title'] ?? meeting['name']) ||
+                  localClass.professor !=
+                      (meeting['description'] ?? meeting['professor']) ||
+                  localClass.room != (meeting['location'] ?? meeting['room'])) {
+                hasChanges = true;
+                break;
+              }
+            }
+          }
+
+          if (hasChanges) {
+            print('Class content mismatch, updating from backend...');
+            await _loadMeetings();
+          }
         }
       }
 
-      // Update last sync time in both cache and SharedPreferences
+      // Actualizar el tiempo de última sincronización
       final now = DateTime.now();
       _syncTimeCache.put(_lastSyncKey, now);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
           'lastSyncTime', now.millisecondsSinceEpoch.toString());
 
+      // Guardar las clases actualizadas en el almacenamiento local
+      await _storage.saveClasses(_classes);
+
       notifyListeners();
+      print('Sync completed successfully at ${now.toIso8601String()}');
     } catch (e) {
       print('Error during backend sync: $e');
     }
@@ -161,13 +274,14 @@ class ScheduleService extends ChangeNotifier {
     try {
       print('Loading meetings from backend...');
       final meetings = await _apiService.getScheduleMeetings(_scheduleId!);
+      print('Found ${meetings.length} meetings in backend');
 
       _classes = meetings.map((meeting) {
         return ClassModel(
           id: meeting['_id'],
-          name: meeting['name'],
-          professor: meeting['professor'] ?? '',
-          room: meeting['room'] ?? '',
+          name: meeting['title'] ?? meeting['name'] ?? 'Untitled',
+          professor: meeting['description'] ?? meeting['professor'] ?? '',
+          room: meeting['location'] ?? meeting['room'] ?? '',
           startTime: _parseTimeOfDay(meeting['start_time']),
           endTime: _parseTimeOfDay(meeting['end_time']),
           color: Color(int.parse(meeting['color'] ?? '0xFFFF5252')),
@@ -327,16 +441,19 @@ class ScheduleService extends ChangeNotifier {
       print('Meeting added to schedule $_scheduleId');
 
       // Convertir el meeting a ClassModel para mostrar en el calendario
+      final startDateTime = DateTime.parse(meetingData['start_time']);
+      final endDateTime = DateTime.parse(meetingData['end_time']);
+
+      // Usar el día de la semana directamente del meetingData
       final classModel = ClassModel(
         id: createdMeeting['_id'],
         name: meetingData['title'],
         professor: meetingData['description'] ?? '',
         room: meetingData['location'] ?? '',
-        dayOfWeek: _getDayOfWeekFromDateTime(
-            DateTime.parse(meetingData['start_time'])),
-        startTime: _parseTimeFromDateTime(meetingData['start_time']),
-        endTime: _parseTimeFromDateTime(meetingData['end_time']),
-        color: Colors.blue,
+        dayOfWeek: _selectedDay ?? _getDayOfWeekFromDateTime(startDateTime),
+        startTime: TimeOfDay(hour: startDateTime.hour, minute: startDateTime.minute),
+        endTime: TimeOfDay(hour: endDateTime.hour, minute: endDateTime.minute),
+        color: selectedColor ?? Colors.blue,
       );
 
       // Guardar localmente
@@ -359,5 +476,11 @@ class ScheduleService extends ChangeNotifier {
   TimeOfDay _parseTimeFromDateTime(String dateTimeString) {
     final dateTime = DateTime.parse(dateTimeString);
     return TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+  }
+
+  Future<void> syncNow() async {
+    if (userId.isNotEmpty) {
+      await _syncWithBackend();
+    }
   }
 }

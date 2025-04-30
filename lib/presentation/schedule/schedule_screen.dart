@@ -523,7 +523,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 final startDateTime = DateTime(
                   _now.year,
                   _now.month,
-                  _now.day,
+                  _now.day + (_selectedDay - _getCurrentDayIndex()),
                   _startTime.hour,
                   _startTime.minute,
                 );
@@ -531,10 +531,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 final endDateTime = DateTime(
                   _now.year,
                   _now.month,
-                  _now.day,
+                  _now.day + (_selectedDay - _getCurrentDayIndex()),
                   _endTime.hour,
                   _endTime.minute,
                 );
+
+                // Establecer el color seleccionado en el ScheduleService
+                context.read<ScheduleService>().selectedColor = _selectedColor;
 
                 final meetingData = {
                   '_id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -544,7 +547,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   'end_time': endDateTime.toIso8601String(),
                   'location': _locationController.text.trim(),
                   'meeting_link': _meetingLinkController.text.trim(),
-                  'host_id': userId, // from globals.dart
+                  'host_id': userId,
                   'participants': [],
                 };
 
