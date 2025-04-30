@@ -444,14 +444,15 @@ class ScheduleService extends ChangeNotifier {
       final startDateTime = DateTime.parse(meetingData['start_time']);
       final endDateTime = DateTime.parse(meetingData['end_time']);
 
-      // Usar el día de la semana directamente del meetingData
+      // Calcular el día de la semana a partir de la fecha de inicio
       final classModel = ClassModel(
         id: createdMeeting['_id'],
         name: meetingData['title'],
         professor: meetingData['description'] ?? '',
         room: meetingData['location'] ?? '',
-        dayOfWeek: _selectedDay ?? _getDayOfWeekFromDateTime(startDateTime),
-        startTime: TimeOfDay(hour: startDateTime.hour, minute: startDateTime.minute),
+        dayOfWeek: _getDayOfWeekFromDateTime(startDateTime),
+        startTime:
+            TimeOfDay(hour: startDateTime.hour, minute: startDateTime.minute),
         endTime: TimeOfDay(hour: endDateTime.hour, minute: endDateTime.minute),
         color: selectedColor ?? Colors.blue,
       );
