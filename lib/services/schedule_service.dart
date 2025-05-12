@@ -31,17 +31,17 @@ class ScheduleService extends ChangeNotifier {
 
   // Lista de meetings
   List<MeetingModel> _meetings = [
-    // Ejemplo de meeting de prueba
-    MeetingModel(
-      id: 'm1',
-      name: 'Team Sync',
-      professor: 'John Doe',
-      room: 'Zoom',
-      dayOfWeek: 0, // Lunes
-      startTime: TimeOfDay(hour: 14, minute: 0),
-      endTime: TimeOfDay(hour: 15, minute: 0),
-      color: Colors.blue,
-    ),
+    // // Ejemplo de meeting de prueba
+    // MeetingModel(
+    //   id: 'm1',
+    //   name: 'Team Sync',
+    //   professor: 'John Doe',
+    //   room: 'Zoom',
+    //   dayOfWeek: 0, // Lunes
+    //   startTime: TimeOfDay(hour: 14, minute: 0),
+    //   endTime: TimeOfDay(hour: 15, minute: 0),
+    //   color: Colors.blue,
+    // ),
   ];
 
   static const List<Color> classColors = [
