@@ -67,33 +67,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         return SizedBox(
           width: double.infinity,
           height: double.infinity,
-          child: Stack(
+          child: Column(
             children: [
-              Column(
-                children: [
-                  const SizedBox(height: 1), // Add small padding at top
-                  _buildWeekDays(),
-                  Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _buildTimeSlots(),
-                        if (_getCurrentDayIndex() != -1 &&
-                            _now.hour >= 7 &&
-                            _now.hour < 20)
-                          _buildCurrentTimeLine(),
-                      ],
+              const SizedBox(height: 1), // Add small padding at top
+              _buildWeekDays(),
+              Expanded(
+                child: Stack(
+                  children: [
+                    // El scroll debe envolver tanto las horas como la línea roja
+                    SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: Stack(
+                        children: [
+                          _buildTimeSlots(),
+                          if (_getCurrentDayIndex() != -1 &&
+                              _now.hour >= 7 &&
+                              _now.hour < 20)
+                            _buildCurrentTimeLine(),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Positioned(
-                right: 16,
-                bottom: 16,
-                child: FloatingActionButton(
-                  onPressed: () => _showAddDialog(),
-                  child: const Icon(Icons.add),
-                  backgroundColor: _selectedColor,
+                  ],
                 ),
               ),
             ],
@@ -181,33 +175,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildCurrentTimeLine() {
     final currentDayIndex = _getCurrentDayIndex();
-    print('Current day index: $currentDayIndex');
-
     if (currentDayIndex == -1) {
-      print('Not showing timeline: weekend');
       return const SizedBox.shrink();
     }
-
     final now = _now;
     final currentHour = now.hour;
     final currentMinute = now.minute;
-
-    print('Current time: $currentHour:$currentMinute');
-
-    // Only show timeline during school hours (7-20)
     if (currentHour < 7 || currentHour >= 20) {
-      print('Not showing timeline: outside school hours');
       return const SizedBox.shrink();
     }
-
-    // Calculate position
     final hourHeight = 60.0; // Height of each hour slot
     final minuteHeight = hourHeight / 60.0; // Height of each minute
     final timelinePosition =
         ((currentHour - 7) * hourHeight) + (currentMinute * minuteHeight);
-
-    print('Timeline position: $timelinePosition');
-
     return Positioned(
       left: 56,
       right: 0,
@@ -244,12 +224,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildTimeSlots() {
-    return ListView.builder(
-      itemCount: 12, // 7:00 to 18:00
-      itemBuilder: (context, index) {
-        final hour = index + 7;
-        return _buildTimeSlot(hour);
-      },
+    return SizedBox(
+      height: 60.0 * 12, // 12 horas de 60px cada una
+      child: ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 12, // 7:00 to 18:00
+        itemBuilder: (context, index) {
+          final hour = index + 7;
+          return _buildTimeSlot(hour);
+        },
+      ),
     );
   }
 
