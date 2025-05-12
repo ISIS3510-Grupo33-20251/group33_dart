@@ -39,6 +39,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         }
       });
     });
+    // Verifica si hay argumentos
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      if (args != null && args['openMeetingDialog'] == true) {
+        _showMeetingDialog(); // Abre el diálogo de nueva meeting
+      }
+    });
   }
 
   @override
@@ -63,51 +70,57 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ScheduleService>(
-      builder: (context, scheduleService, child) {
-        return SizedBox(
-          width: double.infinity,
-          height: double.infinity,
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  const SizedBox(height: 1),
-                  _buildWeekDays(),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: Stack(
-                            children: [
-                              _buildTimeSlots(),
-                              if (_getCurrentDayIndex() != -1 &&
-                                  _now.hour >= 7 &&
-                                  _now.hour < 20)
-                                _buildCurrentTimeLine(),
-                            ],
+    return Scaffold(
+      backgroundColor: Colors.white,
+      // appBar: AppBar(
+      //   title: const Text('Schedule'),
+      // ),
+      body: Consumer<ScheduleService>(
+        builder: (context, scheduleService, child) {
+          return SizedBox(
+            width: double.infinity,
+            height: double.infinity,
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    const SizedBox(height: 1),
+                    _buildWeekDays(),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: Stack(
+                              children: [
+                                _buildTimeSlots(),
+                                if (_getCurrentDayIndex() != -1 &&
+                                    _now.hour >= 7 &&
+                                    _now.hour < 20)
+                                  _buildCurrentTimeLine(),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              // FAB para crear meetings
-              Positioned(
-                right: 16,
-                bottom: 16,
-                child: FloatingActionButton(
-                  onPressed: () => _showAddDialog(),
-                  child: const Icon(Icons.add),
-                  backgroundColor: _selectedColor,
+                  ],
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+                // FAB para crear meetings
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: FloatingActionButton(
+                    onPressed: () => _showAddDialog(),
+                    child: const Icon(Icons.add),
+                    backgroundColor: _selectedColor,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
