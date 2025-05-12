@@ -4,6 +4,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class CacheService {
   final CacheManager _cache = DefaultCacheManager();
+  static const String _lastScheduleUpdateKey = 'last_schedule_update';
 
   Future<void> cacheFlashcard(
       String key, List<Map<String, dynamic>> data) async {
@@ -35,30 +36,58 @@ class CacheService {
   Future<void> removeCachedFlashcard(String key) async {
     await _cache.removeFile(key);
   }
+
   Future<void> cacheUserLocation(Map<String, double> location) async {
-  final jsonString = jsonEncode(location);
-  final bytes = Uint8List.fromList(utf8.encode(jsonString));
-  await _cache.putFile(
-    'last_user_location',
-    bytes,
-    fileExtension: 'json',
-  );
-}
-
-Future<Map<String, double>?> loadCachedUserLocation() async {
-  final fileInfo = await _cache.getFileFromCache('last_user_location');
-  if (fileInfo == null) return null;
-
-  try {
-    final jsonString = await fileInfo.file.readAsString();
-    final data = jsonDecode(jsonString);
-    return {
-      'latitude': (data['latitude'] ?? 0.0).toDouble(),
-      'longitude': (data['longitude'] ?? 0.0).toDouble(),
-    };
-  } catch (e) {
-    print('Error loading cached user location: $e');
-    return null;
+    final jsonString = jsonEncode(location);
+    final bytes = Uint8List.fromList(utf8.encode(jsonString));
+    await _cache.putFile(
+      'last_user_location',
+      bytes,
+      fileExtension: 'json',
+    );
   }
-}
+
+  Future<Map<String, double>?> loadCachedUserLocation() async {
+    final fileInfo = await _cache.getFileFromCache('last_user_location');
+    if (fileInfo == null) return null;
+
+    try {
+      final jsonString = await fileInfo.file.readAsString();
+      final data = jsonDecode(jsonString);
+      return {
+        'latitude': (data['latitude'] ?? 0.0).toDouble(),
+        'longitude': (data['longitude'] ?? 0.0).toDouble(),
+      };
+    } catch (e) {
+      print('Error loading cached user location: $e');
+      return null;
+    }
+  }
+
+  Future<void> cacheLastScheduleUpdate(Map<String, dynamic> updateData) async {
+    final jsonString = jsonEncode(updateData);
+    final bytes = Uint8List.fromList(utf8.encode(jsonString));
+    await _cache.putFile(
+      _lastScheduleUpdateKey,
+      bytes,
+      fileExtension: 'json',
+    );
+  }
+
+  Future<Map<String, dynamic>?> loadLastScheduleUpdate() async {
+    final fileInfo = await _cache.getFileFromCache(_lastScheduleUpdateKey);
+    if (fileInfo == null) return null;
+
+    try {
+      final jsonString = await fileInfo.file.readAsString();
+      return jsonDecode(jsonString) as Map<String, dynamic>;
+    } catch (e) {
+      print('Error loading last schedule update: $e');
+      return null;
+    }
+  }
+
+  Future<void> removeLastScheduleUpdate() async {
+    await _cache.removeFile(_lastScheduleUpdateKey);
+  }
 }

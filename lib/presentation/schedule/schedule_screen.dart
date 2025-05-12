@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import '../../globals.dart';
 import 'dart:async';
+import '../../domain/models/meeting_model.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -38,6 +39,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         }
       });
     });
+    // Verifica si hay argumentos
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      if (args != null && args['openMeetingDialog'] == true) {
+        _showMeetingDialog(); // Abre el diálogo de nueva meeting
+      }
+    });
   }
 
   @override
@@ -62,44 +70,57 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ScheduleService>(
-      builder: (context, scheduleService, child) {
-        return SizedBox(
-          width: double.infinity,
-          height: double.infinity,
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  const SizedBox(height: 1), // Add small padding at top
-                  _buildWeekDays(),
-                  Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _buildTimeSlots(),
-                        if (_getCurrentDayIndex() != -1 &&
-                            _now.hour >= 7 &&
-                            _now.hour < 20)
-                          _buildCurrentTimeLine(),
-                      ],
+    return Scaffold(
+      backgroundColor: Colors.white,
+      // appBar: AppBar(
+      //   title: const Text('Schedule'),
+      // ),
+      body: Consumer<ScheduleService>(
+        builder: (context, scheduleService, child) {
+          return SizedBox(
+            width: double.infinity,
+            height: double.infinity,
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    const SizedBox(height: 1),
+                    _buildWeekDays(),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: Stack(
+                              children: [
+                                _buildTimeSlots(),
+                                if (_getCurrentDayIndex() != -1 &&
+                                    _now.hour >= 7 &&
+                                    _now.hour < 20)
+                                  _buildCurrentTimeLine(),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Positioned(
-                right: 16,
-                bottom: 16,
-                child: FloatingActionButton(
-                  onPressed: () => _showAddDialog(),
-                  child: const Icon(Icons.add),
-                  backgroundColor: _selectedColor,
+                  ],
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+                // FAB para crear meetings
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: FloatingActionButton(
+                    onPressed: () => _showAddDialog(),
+                    child: const Icon(Icons.add),
+                    backgroundColor: _selectedColor,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -181,33 +202,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildCurrentTimeLine() {
     final currentDayIndex = _getCurrentDayIndex();
-    print('Current day index: $currentDayIndex');
-
     if (currentDayIndex == -1) {
-      print('Not showing timeline: weekend');
       return const SizedBox.shrink();
     }
-
     final now = _now;
     final currentHour = now.hour;
     final currentMinute = now.minute;
-
-    print('Current time: $currentHour:$currentMinute');
-
-    // Only show timeline during school hours (7-20)
     if (currentHour < 7 || currentHour >= 20) {
-      print('Not showing timeline: outside school hours');
       return const SizedBox.shrink();
     }
-
-    // Calculate position
     final hourHeight = 60.0; // Height of each hour slot
     final minuteHeight = hourHeight / 60.0; // Height of each minute
     final timelinePosition =
         ((currentHour - 7) * hourHeight) + (currentMinute * minuteHeight);
-
-    print('Timeline position: $timelinePosition');
-
     return Positioned(
       left: 56,
       right: 0,
@@ -244,32 +251,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildTimeSlots() {
-    return ListView.builder(
-      itemCount: 12, // 7:00 to 18:00
-      itemBuilder: (context, index) {
-        final hour = index + 7;
-        return _buildTimeSlot(hour);
-      },
+    return SizedBox(
+      height: 60.0 * 12, // 12 horas de 60px cada una
+      child: ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 12, // 7:00 to 18:00
+        itemBuilder: (context, index) {
+          final hour = index + 7;
+          return _buildTimeSlot(hour);
+        },
+      ),
     );
   }
 
   Widget _buildTimeSlot(int hour) {
-    return Container(
+    return SizedBox(
       height: 60,
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey[300]!,
-            width: 0.5,
-          ),
-        ),
-      ),
       child: Row(
         children: [
+          // Time column
           Container(
             width: 56,
             padding: const EdgeInsets.only(left: 8),
             alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.grey[300]!, width: 0.5),
+              ),
+            ),
             child: Text(
               '${hour.toString().padLeft(2, '0')}:00',
               style: TextStyle(
@@ -278,21 +287,28 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
             ),
           ),
+          // Day columns
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: List.generate(5, (index) {
+              children: List.generate(5, (dayIndex) {
                 return Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: Colors.grey[300]!,
-                          width: 0.5,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            left: BorderSide(
+                                color: Colors.grey[300]!, width: 0.5),
+                            top: BorderSide(
+                                color: Colors.grey[300]!, width: 0.5),
+                          ),
                         ),
                       ),
-                    ),
-                    child: _buildClassBlock(hour, index),
+                      _buildClassBlock(hour, dayIndex),
+                      _buildMeetingBlock(hour, dayIndex),
+                    ],
                   ),
                 );
               }),
@@ -307,52 +323,151 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final scheduleService = context.read<ScheduleService>();
     final classes = scheduleService.getClassesForDayAndHour(dayIndex, hour);
 
-    // print(
-    //     'Building class block for day $dayIndex, hour $hour. Found ${classes.length} classes');
-
     if (classes.isEmpty) {
-      return const SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-      );
+      return const SizedBox.shrink();
     }
 
     final classModel = classes[0];
-    print(
-        'Class found: ${classModel.name} at ${classModel.startTime.hour}:${classModel.startTime.minute}');
-    return GestureDetector(
-      onTap: () => _showClassDialog(classModel),
-      child: Container(
-        margin: const EdgeInsets.all(2),
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: classModel.color,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              classModel.name,
-              style: const TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (classModel.room.isNotEmpty)
+    final startHour = classModel.startTime.hour;
+    final startMinute = classModel.startTime.minute;
+    final endHour = classModel.endTime.hour;
+    final endMinute = classModel.endTime.minute;
+
+    // Solo mostrar el bloque si comienza en esta hora
+    if (startHour != hour) {
+      return const SizedBox.shrink();
+    }
+
+    // Calcular la posición y altura del bloque
+    final startOffset = startMinute / 60.0 * 60; // Convertir a píxeles
+    final duration =
+        ((endHour - startHour) * 60 + (endMinute - startMinute)) / 60.0 * 60;
+
+    return Positioned(
+      top: startOffset,
+      height: duration,
+      left: 2,
+      right: 2,
+      child: GestureDetector(
+        onTap: () => _showClassDialog(classModel),
+        child: Container(
+          decoration: BoxDecoration(
+            color: classModel.color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                classModel.room,
+                classModel.name,
                 style: const TextStyle(
-                  color: Colors.black54,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
                 ),
                 overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
-          ],
+              if (classModel.room.isNotEmpty && duration > 30)
+                Text(
+                  classModel.room,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              if (duration > 25)
+                Text(
+                  '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 9,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMeetingBlock(int hour, int dayIndex) {
+    final scheduleService = context.read<ScheduleService>();
+    final meetings = scheduleService.getMeetingsForDayAndHour(dayIndex, hour);
+
+    if (meetings.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final meetingModel = meetings[0];
+    final startHour = meetingModel.startTime.hour;
+    final startMinute = meetingModel.startTime.minute;
+    final endHour = meetingModel.endTime.hour;
+    final endMinute = meetingModel.endTime.minute;
+
+    if (startHour != hour) {
+      return const SizedBox.shrink();
+    }
+
+    final startOffset = startMinute / 60.0 * 60;
+    final duration =
+        ((endHour - startHour) * 60 + (endMinute - startMinute)) / 60.0 * 60;
+
+    return Positioned(
+      top: startOffset,
+      height: duration,
+      left: 2,
+      right: 2,
+      child: GestureDetector(
+        onTap: () => _showMeetingDialog(meetingModel),
+        child: Container(
+          decoration: BoxDecoration(
+            color: meetingModel.color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                meetingModel.name,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              if (meetingModel.room.isNotEmpty && duration > 30)
+                Text(
+                  meetingModel.room,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              if (duration > 25)
+                Text(
+                  '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 9,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -388,23 +503,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  void _showMeetingDialog() {
+  void _showMeetingDialog([MeetingModel? meetingToEdit]) {
     setState(() {
-      _titleController.clear();
-      _descriptionController.clear();
-      _locationController.clear();
-      _meetingLinkController.clear();
-      _selectedColor = context.read<ScheduleService>().getRandomColor();
-      _startTime = TimeOfDay(hour: _now.hour, minute: 0);
-      _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
-      _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
+      if (meetingToEdit != null) {
+        _titleController.text = meetingToEdit.name;
+        _descriptionController.text = meetingToEdit.professor;
+        _locationController.text = meetingToEdit.room;
+        _meetingLinkController.clear(); // Ajusta si tienes link en el modelo
+        _selectedColor = meetingToEdit.color;
+        _startTime = meetingToEdit.startTime;
+        _endTime = meetingToEdit.endTime;
+        _selectedDay = meetingToEdit.dayOfWeek;
+      } else {
+        _titleController.clear();
+        _descriptionController.clear();
+        _locationController.clear();
+        _meetingLinkController.clear();
+        _selectedColor = context.read<ScheduleService>().getRandomColor();
+        _startTime = TimeOfDay(hour: _now.hour, minute: 0);
+        _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
+        _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
+      }
     });
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('New Meeting'),
+          title: Text(meetingToEdit == null ? 'New Meeting' : 'Edit Meeting'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -506,6 +632,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
           ),
           actions: [
+            if (meetingToEdit != null)
+              TextButton(
+                onPressed: () {
+                  // Aquí puedes agregar lógica para eliminar la meeting si lo deseas
+                  Navigator.pop(context);
+                },
+                child:
+                    const Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel'),
@@ -523,7 +658,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 final startDateTime = DateTime(
                   _now.year,
                   _now.month,
-                  _now.day,
+                  _now.day + (_selectedDay - _getCurrentDayIndex()),
                   _startTime.hour,
                   _startTime.minute,
                 );
@@ -531,21 +666,26 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 final endDateTime = DateTime(
                   _now.year,
                   _now.month,
-                  _now.day,
+                  _now.day + (_selectedDay - _getCurrentDayIndex()),
                   _endTime.hour,
                   _endTime.minute,
                 );
 
+                context.read<ScheduleService>().selectedColor = _selectedColor;
+
                 final meetingData = {
-                  '_id': DateTime.now().millisecondsSinceEpoch.toString(),
+                  // No enviar '_id'
                   'title': title,
                   'description': _descriptionController.text.trim(),
                   'start_time': startDateTime.toIso8601String(),
                   'end_time': endDateTime.toIso8601String(),
                   'location': _locationController.text.trim(),
                   'meeting_link': _meetingLinkController.text.trim(),
-                  'host_id': userId, // from globals.dart
+                  'host_id': userId,
                   'participants': [],
+                  'color':
+                      '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}', // HEX
+                  'day_of_week': _selectedDay, // <--- AGREGADO
                 };
 
                 try {
@@ -554,22 +694,24 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       .createMeeting(meetingData);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Meeting created successfully'),
+                    SnackBar(
+                      content: Text(meetingToEdit == null
+                          ? 'Meeting created successfully'
+                          : 'Meeting updated successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
                 } catch (e) {
-                  print('Error creating meeting: $e');
+                  print('Error creating/updating meeting: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error creating meeting: $e'),
+                      content: Text('Error creating/updating meeting: $e'),
                       backgroundColor: Colors.red,
                     ),
                   );
                 }
               },
-              child: const Text('Create'),
+              child: Text(meetingToEdit == null ? 'Create' : 'Save'),
             ),
           ],
         ),

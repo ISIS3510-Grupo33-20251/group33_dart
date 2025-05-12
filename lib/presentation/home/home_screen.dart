@@ -160,6 +160,15 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context)
+              .pushNamed('/schedule', arguments: {'openMeetingDialog': true});
+        },
+        child: const Icon(Icons.add),
+        backgroundColor: primaryColor,
+        tooltip: 'Create Meeting',
+      ),
     );
   }
 }

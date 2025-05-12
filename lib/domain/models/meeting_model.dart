@@ -25,15 +25,13 @@ class MeetingModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'name': name,
-      'professor': professor,
-      'room': room,
+      'title': name,
+      'description': professor,
+      'location': room,
       'day_of_week': dayOfWeek,
-      'start_time':
-          '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
-      'end_time':
-          '${endTime.hour.toString().padLeft(2, '0')}:${endTime.minute.toString().padLeft(2, '0')}',
-      'color': color.value.toString(),
+      'start_time': _formatTimeOfDay(startTime),
+      'end_time': _formatTimeOfDay(endTime),
+      'color': '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}',
       'participants': participants,
     };
   }
@@ -41,22 +39,43 @@ class MeetingModel {
   factory MeetingModel.fromJson(Map<String, dynamic> json) {
     return MeetingModel(
       id: json['_id'],
-      name: json['name'],
-      professor: json['professor'] ?? '',
-      room: json['room'] ?? '',
-      dayOfWeek: int.parse(json['day_of_week'].toString()),
+      name: json['title'] ?? json['name'] ?? '',
+      professor: json['description'] ?? json['professor'] ?? '',
+      room: json['location'] ?? json['room'] ?? '',
+      dayOfWeek: int.tryParse(json['day_of_week']?.toString() ?? '') ?? 0,
       startTime: _parseTimeOfDay(json['start_time']),
       endTime: _parseTimeOfDay(json['end_time']),
-      color: Color(int.parse(json['color'] ?? '0xFFFF5252')),
+      color: _parseColor(json['color']),
       participants: List<String>.from(json['participants'] ?? []),
     );
   }
 
   static TimeOfDay _parseTimeOfDay(String time) {
+    if (time.contains('T')) {
+      final dateTime = DateTime.parse(time);
+      return TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+    }
     final parts = time.split(':');
     return TimeOfDay(
       hour: int.parse(parts[0]),
       minute: int.parse(parts[1]),
     );
+  }
+
+  static String _formatTimeOfDay(TimeOfDay time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  static Color _parseColor(dynamic colorValue) {
+    if (colorValue == null) return const Color(0xFFFF5252);
+    if (colorValue is int) return Color(colorValue);
+    if (colorValue is String) {
+      if (colorValue.startsWith('#')) {
+        return Color(int.parse(colorValue.replaceFirst('#', '0xff')));
+      } else if (colorValue.startsWith('0x')) {
+        return Color(int.parse(colorValue));
+      }
+    }
+    return const Color(0xFFFF5252);
   }
 }

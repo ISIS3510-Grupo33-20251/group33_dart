@@ -287,26 +287,39 @@ class ApiServiceAdapter {
   Future<Map<String, dynamic>> createMeeting(
       Map<String, dynamic> meetingData) async {
     try {
-      // Imprimir el JSON que se va a enviar
+      // Validación básica
+      if (meetingData['title'] == null || meetingData['title'].trim().isEmpty) {
+        throw Exception('Title is required');
+      }
+      if (meetingData['start_time'] == null ||
+          meetingData['end_time'] == null) {
+        throw Exception('Start and end time are required');
+      }
+
+      // Asegúrate de que las fechas sean ISO 8601
+      final startTime = meetingData['start_time'] is DateTime
+          ? meetingData['start_time']
+          : DateTime.parse(meetingData['start_time']);
+      final endTime = meetingData['end_time'] is DateTime
+          ? meetingData['end_time']
+          : DateTime.parse(meetingData['end_time']);
+
       String jsonString = json.encode({
-        '_id': meetingData['_id'],
         'title': meetingData['title'],
         'description': meetingData['description'],
-        'start_time': meetingData['start_time'],
-        'end_time': meetingData['end_time'],
+        'start_time': startTime.toIso8601String(),
+        'end_time': endTime.toIso8601String(),
         'location': meetingData['location'],
         'meeting_link': meetingData['meeting_link'],
         'host_id': meetingData['host_id'],
         'participants': meetingData['participants'] ?? [],
+        'color': meetingData['color'],
+        'day_of_week': meetingData['day_of_week'],
       });
 
-      // Crear la URL
       final url = Uri.parse('$backendUrl/meetings/');
-      print('Sending request to: $url'); // Imprimir la URL
-
-      // Imprimir el comando curl
-      print(
-          'curl -X POST $url -H "Content-Type: application/json" -d \'$jsonString\'');
+      print('Sending request to: $url');
+      print('Request body: $jsonString');
 
       final response = await http.post(
         url,
@@ -367,15 +380,63 @@ class ApiServiceAdapter {
 
   Future<List<Map<String, dynamic>>> getScheduleMeetings(
       String scheduleId) async {
-    final response = await http.get(
-      Uri.parse('$backendUrl/schedules/$scheduleId/meetings'),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('$backendUrl/schedules/$scheduleId/meetings'),
+      );
 
-    if (response.statusCode == 200) {
-      List<dynamic> meetings = json.decode(response.body);
-      return meetings.cast<Map<String, dynamic>>();
+      print('Schedule meetings response status: ${response.statusCode}');
+      print('Schedule meetings response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final dynamic decodedResponse = json.decode(response.body);
+        List<Map<String, dynamic>> meetings = [];
+
+        // Verificar si la respuesta es una lista
+        if (decodedResponse is List) {
+          // Para cada ID de reunión, obtener sus detalles
+          for (var item in decodedResponse) {
+            String meetingId;
+            if (item is Map && item.containsKey('_id')) {
+              meetingId = item['_id'];
+            } else if (item is String) {
+              meetingId = item;
+            } else {
+              print('Unexpected item format: $item');
+              continue;
+            }
+
+            try {
+              // Obtener los detalles de la reunión
+              final meetingResponse = await http.get(
+                Uri.parse('$backendUrl/meetings/$meetingId'),
+              );
+
+              if (meetingResponse.statusCode == 200) {
+                final meetingData = json.decode(meetingResponse.body);
+                if (meetingData is Map) {
+                  meetings.add(Map<String, dynamic>.from(meetingData));
+                }
+              } else {
+                print('Failed to get meeting details for ID: $meetingId');
+              }
+            } catch (e) {
+              print('Error getting meeting details for ID: $meetingId - $e');
+            }
+          }
+        } else if (decodedResponse is Map) {
+          // Si la respuesta es un solo objeto
+          meetings.add(Map<String, dynamic>.from(decodedResponse));
+        }
+
+        print('Processed ${meetings.length} meetings with full details');
+        return meetings;
+      }
+      throw Exception('Failed to get schedule meetings: ${response.body}');
+    } catch (e) {
+      print('Error in getScheduleMeetings: $e');
+      throw Exception('Failed to get schedule meetings: $e');
     }
-    throw Exception('Failed to get schedule meetings: ${response.body}');
   }
 
   Future<void> addMeetingToSchedule(String scheduleId, String meetingId) async {
