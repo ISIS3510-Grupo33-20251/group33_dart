@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import '../../globals.dart';
 import 'dart:async';
+import '../../domain/models/meeting_model.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -67,27 +68,40 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         return SizedBox(
           width: double.infinity,
           height: double.infinity,
-          child: Column(
+          child: Stack(
             children: [
-              const SizedBox(height: 1), // Add small padding at top
-              _buildWeekDays(),
-              Expanded(
-                child: Stack(
-                  children: [
-                    // El scroll debe envolver tanto las horas como la línea roja
-                    SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: Stack(
-                        children: [
-                          _buildTimeSlots(),
-                          if (_getCurrentDayIndex() != -1 &&
-                              _now.hour >= 7 &&
-                              _now.hour < 20)
-                            _buildCurrentTimeLine(),
-                        ],
-                      ),
+              Column(
+                children: [
+                  const SizedBox(height: 1),
+                  _buildWeekDays(),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        SingleChildScrollView(
+                          scrollDirection: Axis.vertical,
+                          child: Stack(
+                            children: [
+                              _buildTimeSlots(),
+                              if (_getCurrentDayIndex() != -1 &&
+                                  _now.hour >= 7 &&
+                                  _now.hour < 20)
+                                _buildCurrentTimeLine(),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              // FAB para crear meetings
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: FloatingActionButton(
+                  onPressed: () => _showAddDialog(),
+                  child: const Icon(Icons.add),
+                  backgroundColor: _selectedColor,
                 ),
               ),
             ],
@@ -280,6 +294,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         ),
                       ),
                       _buildClassBlock(hour, dayIndex),
+                      _buildMeetingBlock(hour, dayIndex),
                     ],
                   ),
                 );
@@ -369,6 +384,82 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
+  Widget _buildMeetingBlock(int hour, int dayIndex) {
+    final scheduleService = context.read<ScheduleService>();
+    final meetings = scheduleService.getMeetingsForDayAndHour(dayIndex, hour);
+
+    if (meetings.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final meetingModel = meetings[0];
+    final startHour = meetingModel.startTime.hour;
+    final startMinute = meetingModel.startTime.minute;
+    final endHour = meetingModel.endTime.hour;
+    final endMinute = meetingModel.endTime.minute;
+
+    if (startHour != hour) {
+      return const SizedBox.shrink();
+    }
+
+    final startOffset = startMinute / 60.0 * 60;
+    final duration =
+        ((endHour - startHour) * 60 + (endMinute - startMinute)) / 60.0 * 60;
+
+    return Positioned(
+      top: startOffset,
+      height: duration,
+      left: 2,
+      right: 2,
+      child: GestureDetector(
+        onTap: () => _showMeetingDialog(meetingModel),
+        child: Container(
+          decoration: BoxDecoration(
+            color: meetingModel.color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                meetingModel.name,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              if (meetingModel.room.isNotEmpty && duration > 30)
+                Text(
+                  meetingModel.room,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              if (duration > 25)
+                Text(
+                  '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 9,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAddDialog() {
     showDialog(
       context: context,
@@ -399,23 +490,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  void _showMeetingDialog() {
+  void _showMeetingDialog([MeetingModel? meetingToEdit]) {
     setState(() {
-      _titleController.clear();
-      _descriptionController.clear();
-      _locationController.clear();
-      _meetingLinkController.clear();
-      _selectedColor = context.read<ScheduleService>().getRandomColor();
-      _startTime = TimeOfDay(hour: _now.hour, minute: 0);
-      _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
-      _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
+      if (meetingToEdit != null) {
+        _titleController.text = meetingToEdit.name;
+        _descriptionController.text = meetingToEdit.professor;
+        _locationController.text = meetingToEdit.room;
+        _meetingLinkController.clear(); // Ajusta si tienes link en el modelo
+        _selectedColor = meetingToEdit.color;
+        _startTime = meetingToEdit.startTime;
+        _endTime = meetingToEdit.endTime;
+        _selectedDay = meetingToEdit.dayOfWeek;
+      } else {
+        _titleController.clear();
+        _descriptionController.clear();
+        _locationController.clear();
+        _meetingLinkController.clear();
+        _selectedColor = context.read<ScheduleService>().getRandomColor();
+        _startTime = TimeOfDay(hour: _now.hour, minute: 0);
+        _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
+        _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
+      }
     });
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('New Meeting'),
+          title: Text(meetingToEdit == null ? 'New Meeting' : 'Edit Meeting'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -517,6 +619,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
           ),
           actions: [
+            if (meetingToEdit != null)
+              TextButton(
+                onPressed: () {
+                  // Aquí puedes agregar lógica para eliminar la meeting si lo deseas
+                  Navigator.pop(context);
+                },
+                child:
+                    const Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel'),
@@ -547,11 +658,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   _endTime.minute,
                 );
 
-                // Establecer el color seleccionado en el ScheduleService
                 context.read<ScheduleService>().selectedColor = _selectedColor;
 
                 final meetingData = {
-                  '_id': DateTime.now().millisecondsSinceEpoch.toString(),
+                  // No enviar '_id'
                   'title': title,
                   'description': _descriptionController.text.trim(),
                   'start_time': startDateTime.toIso8601String(),
@@ -568,22 +678,24 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       .createMeeting(meetingData);
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Meeting created successfully'),
+                    SnackBar(
+                      content: Text(meetingToEdit == null
+                          ? 'Meeting created successfully'
+                          : 'Meeting updated successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
                 } catch (e) {
-                  print('Error creating meeting: $e');
+                  print('Error creating/updating meeting: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error creating meeting: $e'),
+                      content: Text('Error creating/updating meeting: $e'),
                       backgroundColor: Colors.red,
                     ),
                   );
                 }
               },
-              child: const Text('Create'),
+              child: Text(meetingToEdit == null ? 'Create' : 'Save'),
             ),
           ],
         ),

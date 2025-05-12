@@ -287,26 +287,37 @@ class ApiServiceAdapter {
   Future<Map<String, dynamic>> createMeeting(
       Map<String, dynamic> meetingData) async {
     try {
-      // Imprimir el JSON que se va a enviar
+      // Validación básica
+      if (meetingData['title'] == null || meetingData['title'].trim().isEmpty) {
+        throw Exception('Title is required');
+      }
+      if (meetingData['start_time'] == null ||
+          meetingData['end_time'] == null) {
+        throw Exception('Start and end time are required');
+      }
+
+      // Asegúrate de que las fechas sean ISO 8601
+      final startTime = meetingData['start_time'] is DateTime
+          ? meetingData['start_time']
+          : DateTime.parse(meetingData['start_time']);
+      final endTime = meetingData['end_time'] is DateTime
+          ? meetingData['end_time']
+          : DateTime.parse(meetingData['end_time']);
+
       String jsonString = json.encode({
-        '_id': meetingData['_id'],
         'title': meetingData['title'],
         'description': meetingData['description'],
-        'start_time': meetingData['start_time'],
-        'end_time': meetingData['end_time'],
+        'start_time': startTime.toIso8601String(),
+        'end_time': endTime.toIso8601String(),
         'location': meetingData['location'],
         'meeting_link': meetingData['meeting_link'],
         'host_id': meetingData['host_id'],
         'participants': meetingData['participants'] ?? [],
       });
 
-      // Crear la URL
       final url = Uri.parse('$backendUrl/meetings/');
-      print('Sending request to: $url'); // Imprimir la URL
-
-      // Imprimir el comando curl
-      print(
-          'curl -X POST $url -H "Content-Type: application/json" -d \'$jsonString\'');
+      print('Sending request to: $url');
+      print('Request body: $jsonString');
 
       final response = await http.post(
         url,

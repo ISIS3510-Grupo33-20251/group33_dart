@@ -29,6 +29,21 @@ class ScheduleService extends ChangeNotifier {
   Box<dynamic>? _box;
   Color? selectedColor;
 
+  // Lista de meetings
+  List<MeetingModel> _meetings = [
+    // Ejemplo de meeting de prueba
+    MeetingModel(
+      id: 'm1',
+      name: 'Team Sync',
+      professor: 'John Doe',
+      room: 'Zoom',
+      dayOfWeek: 0, // Lunes
+      startTime: TimeOfDay(hour: 14, minute: 0),
+      endTime: TimeOfDay(hour: 15, minute: 0),
+      color: Colors.blue,
+    ),
+  ];
+
   static const List<Color> classColors = [
     Color(0xFFFF5252), // Red
     Color(0xFFFF7043), // Deep Orange
@@ -454,6 +469,7 @@ class ScheduleService extends ChangeNotifier {
 
       // Eliminar localmente
       _classes.removeWhere((c) => c.id == id);
+      removeMeeting(id); // También remueve de meetings
       await _storage.saveClasses(_classes);
       notifyListeners();
       print('Class removed successfully');
@@ -528,30 +544,20 @@ class ScheduleService extends ChangeNotifier {
   Future<void> createMeeting(Map<String, dynamic> meetingData) async {
     try {
       print('Creating meeting with data: $meetingData');
-
-      // Asegurarse de que tenemos un scheduleId
       if (_scheduleId == null) {
         await _syncWithBackend();
         if (_scheduleId == null) {
           throw Exception('No schedule ID available');
         }
       }
-
-      // Crear el meeting en el backend
       final createdMeeting = await _apiService.createMeeting(meetingData);
       print('Meeting created with ID: ${createdMeeting['_id']}');
-
-      // Agregar el meeting al schedule
       await _apiService.addMeetingToSchedule(
           _scheduleId!, createdMeeting['_id']);
       print('Meeting added to schedule $_scheduleId');
-
-      // Convertir el meeting a ClassModel para mostrar en el calendario
       final startDateTime = DateTime.parse(meetingData['start_time']);
       final endDateTime = DateTime.parse(meetingData['end_time']);
-
-      // Calcular el día de la semana a partir de la fecha de inicio
-      final classModel = ClassModel(
+      final meetingModel = MeetingModel(
         id: createdMeeting['_id'],
         name: meetingData['title'],
         professor: meetingData['description'] ?? '',
@@ -562,12 +568,8 @@ class ScheduleService extends ChangeNotifier {
         endTime: TimeOfDay(hour: endDateTime.hour, minute: endDateTime.minute),
         color: selectedColor ?? Colors.blue,
       );
-
-      // Guardar localmente
-      await _storage.saveClasses([..._classes, classModel]);
-      _classes.add(classModel);
-      notifyListeners();
-      print('Meeting added successfully and converted to class for display');
+      addMeeting(meetingModel);
+      print('Meeting added successfully and converted to meeting for display');
     } catch (e) {
       print('Error creating meeting: $e');
       throw Exception('Failed to create meeting: $e');
@@ -595,5 +597,22 @@ class ScheduleService extends ChangeNotifier {
     }
 
     await _syncWithBackend();
+  }
+
+  // Método para obtener meetings por día y hora
+  List<MeetingModel> getMeetingsForDayAndHour(int dayIndex, int hour) {
+    return _meetings
+        .where((m) => m.dayOfWeek == dayIndex && m.startTime.hour == hour)
+        .toList();
+  }
+
+  void addMeeting(MeetingModel meeting) {
+    _meetings.add(meeting);
+    notifyListeners();
+  }
+
+  void removeMeeting(String id) {
+    _meetings.removeWhere((m) => m.id == id);
+    notifyListeners();
   }
 }
