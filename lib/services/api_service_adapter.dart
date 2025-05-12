@@ -313,6 +313,8 @@ class ApiServiceAdapter {
         'meeting_link': meetingData['meeting_link'],
         'host_id': meetingData['host_id'],
         'participants': meetingData['participants'] ?? [],
+        'color': meetingData['color'],
+        'day_of_week': meetingData['day_of_week'],
       });
 
       final url = Uri.parse('$backendUrl/meetings/');

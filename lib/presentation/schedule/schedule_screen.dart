@@ -670,6 +670,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   'meeting_link': _meetingLinkController.text.trim(),
                   'host_id': userId,
                   'participants': [],
+                  'color':
+                      '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}', // HEX
+                  'day_of_week': _selectedDay, // <--- AGREGADO
                 };
 
                 try {

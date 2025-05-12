@@ -25,7 +25,7 @@ class MainMenuPage extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error al cerrar sesión'),
+            content: Text('Error logging out'),
             backgroundColor: Colors.red,
           ),
         );
@@ -77,7 +77,7 @@ class MainMenuPage extends StatelessWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('No hay conexión a internet'),
+              content: Text('There is no internet connection'),
               backgroundColor: Colors.red,
             ),
           );
@@ -90,7 +90,7 @@ class MainMenuPage extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Horario sincronizado'),
+            content: Text('Schedule synced'),
             backgroundColor: Colors.green,
           ),
         );
@@ -99,7 +99,7 @@ class MainMenuPage extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al sincronizar: $e'),
+            content: Text('Error syncing schedule: $e'),
             backgroundColor: Colors.red,
           ),
         );
