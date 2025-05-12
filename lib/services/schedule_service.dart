@@ -344,6 +344,17 @@ class ScheduleService extends ChangeNotifier {
         final String endTime = meeting['end_time']?.toString() ?? '00:00';
         final String colorStr = meeting['color']?.toString() ?? '0xFFFF5252';
 
+        // Calculate dayOfWeek from startTime (ISO string)
+        int dayOfWeek = 0;
+        try {
+          final DateTime startDate = DateTime.parse(startTime);
+          dayOfWeek = startDate.weekday - 1; // 0=Monday, 1=Tuesday, ...
+          if (dayOfWeek < 0) dayOfWeek = 0;
+          if (dayOfWeek > 4) dayOfWeek = 0;
+        } catch (e) {
+          print('Error parsing startTime for dayOfWeek: $e');
+        }
+
         print('Parsed meeting data:');
         print('  ID: $id');
         print('  Name: $name');
@@ -367,6 +378,7 @@ class ScheduleService extends ChangeNotifier {
           name: name,
           professor: professor,
           room: room,
+          dayOfWeek: dayOfWeek,
           startTime: _parseTimeOfDay(startTime),
           endTime: _parseTimeOfDay(endTime),
           color: Color(colorValue),
@@ -472,7 +484,7 @@ class ScheduleService extends ChangeNotifier {
         print('Meeting reference removed from schedule');
       }
 
-      // Eliminar del backend después
+      // Eliminar la meeting del backend
       await _apiService.deleteMeeting(id);
       print('Meeting deleted from backend');
 

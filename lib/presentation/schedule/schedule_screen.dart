@@ -359,37 +359,41 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                classModel.name,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
+              Flexible(
+                child: Text(
+                  classModel.name,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
               ),
-              if (classModel.room.isNotEmpty && duration > 30)
-                Text(
-                  classModel.room,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+              if (duration > 40) ...[
+                if (classModel.room.isNotEmpty && duration > 30)
+                  Text(
+                    classModel.room,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              if (duration > 25)
-                Text(
-                  '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 9,
+                if (duration > 25)
+                  Text(
+                    '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 9,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
+              ],
             ],
           ),
         ),
@@ -435,37 +439,41 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                meetingModel.name,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
+              Flexible(
+                child: Text(
+                  meetingModel.name,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
               ),
-              if (meetingModel.room.isNotEmpty && duration > 30)
-                Text(
-                  meetingModel.room,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+              if (duration > 40) ...[
+                if (meetingModel.room.isNotEmpty && duration > 30)
+                  Text(
+                    meetingModel.room,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              if (duration > 25)
-                Text(
-                  '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 9,
+                if (duration > 25)
+                  Text(
+                    '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 9,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
+              ],
             ],
           ),
         ),
@@ -634,10 +642,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           actions: [
             if (meetingToEdit != null)
               TextButton(
-                onPressed: () {
-                  context
+                onPressed: () async {
+                  await context
                       .read<ScheduleService>()
-                      .removeMeeting(meetingToEdit.id!);
+                      .removeClass(meetingToEdit.id!);
                   Navigator.pop(context);
                 },
                 child:
