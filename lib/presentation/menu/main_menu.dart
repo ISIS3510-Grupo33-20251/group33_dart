@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../services/schedule_service.dart';
 import 'package:intl/intl.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});
@@ -63,6 +64,49 @@ class MainMenuPage extends StatelessWidget {
     }
   }
 
+  Future<bool> _checkConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    return connectivityResult != ConnectivityResult.none;
+  }
+
+  Future<void> _handleSync(BuildContext context) async {
+    final scheduleService = context.read<ScheduleService>();
+
+    try {
+      if (!await _checkConnectivity()) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No hay conexión a internet'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      await scheduleService.syncNow();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Horario sincronizado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al sincronizar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,28 +118,42 @@ class MainMenuPage extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('SEMESTER 1',
-                style: TextStyle(
-                    color: Color.fromARGB(255, 81, 80, 80),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.only(bottom: 1),
+              child: const Text('SEMESTER 1',
+                  style: TextStyle(
+                      color: Color.fromARGB(255, 81, 80, 80),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold)),
+            ),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Schedule',
                     style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.black)),
-                const SizedBox(width: 10),
                 Consumer<ScheduleService>(
                   builder: (context, scheduleService, child) {
-                    return Text(
-                      _formatLastSyncTime(scheduleService.lastSyncTime),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                        fontStyle: FontStyle.italic,
-                      ),
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatLastSyncTime(scheduleService.lastSyncTime),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color.fromARGB(255, 81, 80, 80),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.sync, size: 18),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => _handleSync(context),
+                        ),
+                      ],
                     );
                   },
                 ),

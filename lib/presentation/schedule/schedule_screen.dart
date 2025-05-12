@@ -254,22 +254,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildTimeSlot(int hour) {
-    return Container(
+    return SizedBox(
       height: 60,
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey[300]!,
-            width: 0.5,
-          ),
-        ),
-      ),
       child: Row(
         children: [
+          // Time column
           Container(
             width: 56,
             padding: const EdgeInsets.only(left: 8),
             alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Colors.grey[300]!, width: 0.5),
+              ),
+            ),
             child: Text(
               '${hour.toString().padLeft(2, '0')}:00',
               style: TextStyle(
@@ -278,21 +276,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
             ),
           ),
+          // Day columns
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: List.generate(5, (index) {
+              children: List.generate(5, (dayIndex) {
                 return Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: Colors.grey[300]!,
-                          width: 0.5,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            left: BorderSide(
+                                color: Colors.grey[300]!, width: 0.5),
+                            top: BorderSide(
+                                color: Colors.grey[300]!, width: 0.5),
+                          ),
                         ),
                       ),
-                    ),
-                    child: _buildClassBlock(hour, index),
+                      _buildClassBlock(hour, dayIndex),
+                    ],
                   ),
                 );
               }),
@@ -307,52 +311,75 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final scheduleService = context.read<ScheduleService>();
     final classes = scheduleService.getClassesForDayAndHour(dayIndex, hour);
 
-    // print(
-    //     'Building class block for day $dayIndex, hour $hour. Found ${classes.length} classes');
-
     if (classes.isEmpty) {
-      return const SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-      );
+      return const SizedBox.shrink();
     }
 
     final classModel = classes[0];
-    print(
-        'Class found: ${classModel.name} at ${classModel.startTime.hour}:${classModel.startTime.minute}');
-    return GestureDetector(
-      onTap: () => _showClassDialog(classModel),
-      child: Container(
-        margin: const EdgeInsets.all(2),
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: classModel.color,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              classModel.name,
-              style: const TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (classModel.room.isNotEmpty)
+    final startHour = classModel.startTime.hour;
+    final startMinute = classModel.startTime.minute;
+    final endHour = classModel.endTime.hour;
+    final endMinute = classModel.endTime.minute;
+
+    // Solo mostrar el bloque si comienza en esta hora
+    if (startHour != hour) {
+      return const SizedBox.shrink();
+    }
+
+    // Calcular la posición y altura del bloque
+    final startOffset = startMinute / 60.0 * 60; // Convertir a píxeles
+    final duration =
+        ((endHour - startHour) * 60 + (endMinute - startMinute)) / 60.0 * 60;
+
+    return Positioned(
+      top: startOffset,
+      height: duration,
+      left: 2,
+      right: 2,
+      child: GestureDetector(
+        onTap: () => _showClassDialog(classModel),
+        child: Container(
+          decoration: BoxDecoration(
+            color: classModel.color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                classModel.room,
+                classModel.name,
                 style: const TextStyle(
-                  color: Colors.black54,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
                 ),
                 overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
-          ],
+              if (classModel.room.isNotEmpty && duration > 30)
+                Text(
+                  classModel.room,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              if (duration > 25)
+                Text(
+                  '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 9,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -523,7 +550,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 final startDateTime = DateTime(
                   _now.year,
                   _now.month,
-                  _now.day,
+                  _now.day + (_selectedDay - _getCurrentDayIndex()),
                   _startTime.hour,
                   _startTime.minute,
                 );
@@ -531,10 +558,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 final endDateTime = DateTime(
                   _now.year,
                   _now.month,
-                  _now.day,
+                  _now.day + (_selectedDay - _getCurrentDayIndex()),
                   _endTime.hour,
                   _endTime.minute,
                 );
+
+                // Establecer el color seleccionado en el ScheduleService
+                context.read<ScheduleService>().selectedColor = _selectedColor;
 
                 final meetingData = {
                   '_id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -544,7 +574,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   'end_time': endDateTime.toIso8601String(),
                   'location': _locationController.text.trim(),
                   'meeting_link': _meetingLinkController.text.trim(),
-                  'host_id': userId, // from globals.dart
+                  'host_id': userId,
                   'participants': [],
                 };
 
