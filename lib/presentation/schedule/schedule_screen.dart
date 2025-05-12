@@ -635,7 +635,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             if (meetingToEdit != null)
               TextButton(
                 onPressed: () {
-                  // Aquí puedes agregar lógica para eliminar la meeting si lo deseas
+                  context
+                      .read<ScheduleService>()
+                      .removeMeeting(meetingToEdit.id!);
                   Navigator.pop(context);
                 },
                 child:

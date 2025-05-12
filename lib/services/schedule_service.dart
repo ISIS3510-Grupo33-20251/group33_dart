@@ -353,6 +353,15 @@ class ScheduleService extends ChangeNotifier {
         print('  End Time: $endTime');
         print('  Color: $colorStr');
 
+        int colorValue;
+        if (colorStr.startsWith('#')) {
+          colorValue = int.parse('FF' + colorStr.substring(1), radix: 16);
+        } else if (colorStr.startsWith('0x') || colorStr.startsWith('0X')) {
+          colorValue = int.parse(colorStr);
+        } else {
+          colorValue = int.parse(colorStr, radix: 16);
+        }
+
         return ClassModel(
           id: id,
           name: name,
@@ -360,7 +369,7 @@ class ScheduleService extends ChangeNotifier {
           room: room,
           startTime: _parseTimeOfDay(startTime),
           endTime: _parseTimeOfDay(endTime),
-          color: Color(int.parse(colorStr)),
+          color: Color(colorValue),
         );
       }).toList();
 
@@ -457,15 +466,15 @@ class ScheduleService extends ChangeNotifier {
         return;
       }
 
-      // Eliminar del backend primero
-      await _apiService.deleteMeeting(id);
-      print('Meeting deleted from backend');
-
-      // Si el schedule existe, remover la referencia del meeting
+      // Si el schedule existe, remover la referencia del meeting primero
       if (_scheduleId != null) {
         await _apiService.removeMeetingFromSchedule(_scheduleId!, id);
         print('Meeting reference removed from schedule');
       }
+
+      // Eliminar del backend después
+      await _apiService.deleteMeeting(id);
+      print('Meeting deleted from backend');
 
       // Eliminar localmente
       _classes.removeWhere((c) => c.id == id);
@@ -577,9 +586,12 @@ class ScheduleService extends ChangeNotifier {
   }
 
   int _getDayOfWeekFromDateTime(DateTime dateTime) {
-    // Convertir de DateTime (1-7, Lun-Dom) a nuestro formato (0-4, Lun-Vie)
-    int day = dateTime.weekday - 1;
-    return day >= 5 ? 0 : day; // Si es fin de semana, asignar al lunes
+    // DateTime.weekday: 1=Lunes, 2=Martes, ..., 7=Domingo
+    int day = dateTime.weekday - 1; // 0=Lunes, 1=Martes, ..., 6=Domingo
+    // Si quieres solo Lunes a Viernes (0-4), limita el valor:
+    if (day < 0) day = 0;
+    if (day > 4) day = 0; // Opcional: asigna lunes si es fin de semana
+    return day;
   }
 
   TimeOfDay _parseTimeFromDateTime(String dateTimeString) {
