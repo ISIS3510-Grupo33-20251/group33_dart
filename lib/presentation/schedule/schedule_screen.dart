@@ -643,10 +643,37 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             if (meetingToEdit != null)
               TextButton(
                 onPressed: () async {
-                  await context
-                      .read<ScheduleService>()
-                      .removeClass(meetingToEdit.id!);
-                  Navigator.pop(context);
+                  try {
+                    await context
+                        .read<ScheduleService>()
+                        .removeClass(meetingToEdit.id!);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Meeting deleted successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } catch (e) {
+                    Navigator.pop(context);
+                    final msg = e.toString();
+                    if (msg.contains('Meeting deleted locally')) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Meeting deleted locally, will be updated when connected to internet'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error deleting meeting: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
                 },
                 child:
                     const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -713,12 +740,24 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   );
                 } catch (e) {
                   print('Error creating/updating meeting: $e');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error creating/updating meeting: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  Navigator.pop(context);
+                  final msg = e.toString();
+                  if (msg.contains('Meeting created locally')) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Meeting created locally, will be updated when connected to internet'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error creating/updating meeting: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
               child: Text(meetingToEdit == null ? 'Create' : 'Save'),

@@ -59,6 +59,8 @@ class ScheduleService extends ChangeNotifier {
   DateTime? get lastSyncTime => _syncTimeCache.get(_lastSyncKey);
   String? get scheduleId => _scheduleId;
 
+  static const String _offlineMeetingsBox = 'offline_meetings_box';
+
   ScheduleService() : _apiService = ApiServiceAdapter(backendUrl: backendUrl) {
     _initializeSchedule();
     _startConnectivityListener();
@@ -138,6 +140,9 @@ class ScheduleService extends ChangeNotifier {
         print('No userId available, working in offline mode');
       }
 
+      // Load offline meetings
+      await _loadOfflineMeetings();
+
       _isInitialized = true;
     } catch (e) {
       print('Error initializing schedule: $e');
@@ -152,6 +157,39 @@ class ScheduleService extends ChangeNotifier {
     }
 
     try {
+      // Sync offline meetings to backend
+      if (Hive.isBoxOpen(_offlineMeetingsBox)) {
+        final box = Hive.box(_offlineMeetingsBox);
+        final List offlineMeetings = box.values.toList();
+        for (var m in offlineMeetings) {
+          try {
+            print('Processing offline meeting for sync: $m');
+            final meeting = MeetingModel.fromJson(Map<String, dynamic>.from(m));
+            // Check if this meeting is already in backend (by name and startTime)
+            bool existsInBackend = _meetings.any((mm) =>
+                mm.name == meeting.name && mm.startTime == meeting.startTime);
+            if (!existsInBackend) {
+              final meetingData = meeting.toJson(meetingLink: '');
+              print('Syncing offline meeting to backend: $meetingData');
+              meetingData.remove('id');
+              final createdMeeting =
+                  await _apiService.createMeeting(meetingData);
+              if (_scheduleId != null) {
+                await _apiService.addMeetingToSchedule(
+                    _scheduleId!, createdMeeting['_id']);
+              }
+              await box.delete(meeting.id);
+              print('Offline meeting merged and synced: ${meeting.name}');
+            } else {
+              // If already in backend, just remove from offline
+              await box.delete(meeting.id);
+            }
+          } catch (e) {
+            print('Error merging/syncing offline meeting: $e');
+          }
+        }
+      }
+
       // Verificar si hay una actualización pendiente en caché
       final lastUpdate = await _cache.loadLastScheduleUpdate();
       if (lastUpdate != null) {
@@ -264,6 +302,17 @@ class ScheduleService extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_scheduleIdKey, _scheduleId!);
         await _storage.saveScheduleId(_scheduleId!);
+
+        // After syncing, remove offline meetings that are now in backend
+        final box = Hive.box(_offlineMeetingsBox);
+        final List offlineMeetings = box.values.toList();
+        for (var m in offlineMeetings) {
+          final meeting = MeetingModel.fromJson(Map<String, dynamic>.from(m));
+          if (_meetings.any((mm) =>
+              mm.name == meeting.name && mm.startTime == meeting.startTime)) {
+            await box.delete(meeting.id);
+          }
+        }
       } else {
         // Si ya tenemos un scheduleId, verificar si hay actualizaciones
         print('Checking for schedule updates...');
@@ -403,6 +452,7 @@ class ScheduleService extends ChangeNotifier {
   Future<void> addClass(ClassModel classModel) async {
     try {
       print('Adding new class: ${classModel.name}');
+      print('ClassModel data: ${classModel.toJson()}');
 
       // Convertir ClassModel a MeetingModel
       final meetingModel = MeetingModel(
@@ -465,17 +515,23 @@ class ScheduleService extends ChangeNotifier {
 
   Future<void> removeClass(String id) async {
     try {
+      if (id == null || id == 'null') {
+        print('removeClass called with null id, skipping');
+        return;
+      }
       if (!_isOnline) {
-        // Si no hay conexión, guardar la actualización en caché
+        // Cache the delete for later
         await _cache.cacheLastScheduleUpdate({
           'type': 'remove',
           'classId': id,
         });
-        // Eliminar localmente
+        // Remove locally
         _classes.removeWhere((c) => c.id == id);
+        removeMeeting(id);
         await _storage.saveClasses(_classes);
         notifyListeners();
-        return;
+        throw Exception(
+            'Meeting deleted locally, will be updated when connected to internet');
       }
 
       // Si el schedule existe, remover la referencia del meeting primero
@@ -565,6 +621,36 @@ class ScheduleService extends ChangeNotifier {
   Future<void> createMeeting(Map<String, dynamic> meetingData) async {
     try {
       print('Creating meeting with data: $meetingData');
+      if (!_isOnline) {
+        if (!Hive.isBoxOpen(_offlineMeetingsBox)) {
+          await Hive.openBox(_offlineMeetingsBox);
+        }
+        // Save locally and cache for later sync
+        final tempId = DateTime.now().millisecondsSinceEpoch.toString();
+        final startDateTime = DateTime.parse(meetingData['start_time']);
+        final endDateTime = DateTime.parse(meetingData['end_time']);
+        final meetingModel = MeetingModel(
+          id: tempId,
+          name: meetingData['title'],
+          professor: meetingData['description'] ?? '',
+          room: meetingData['location'] ?? '',
+          dayOfWeek: _getDayOfWeekFromDateTime(startDateTime),
+          startTime:
+              TimeOfDay(hour: startDateTime.hour, minute: startDateTime.minute),
+          endTime:
+              TimeOfDay(hour: endDateTime.hour, minute: endDateTime.minute),
+          color: selectedColor ?? Colors.blue,
+        );
+        addMeeting(meetingModel);
+        await _saveOfflineMeeting(meetingModel);
+        await _cache.cacheLastScheduleUpdate({
+          'type': 'add',
+          'class': meetingModel.toJson(),
+        });
+        notifyListeners();
+        throw Exception(
+            'Meeting created locally, will be updated when connected to internet');
+      }
       if (_scheduleId == null) {
         await _syncWithBackend();
         if (_scheduleId == null) {
@@ -590,6 +676,8 @@ class ScheduleService extends ChangeNotifier {
         color: selectedColor ?? Colors.blue,
       );
       addMeeting(meetingModel);
+      // Remove from offline if present
+      await _removeOfflineMeeting(meetingModel.id ?? '');
       print('Meeting added successfully and converted to meeting for display');
     } catch (e) {
       print('Error creating meeting: $e');
@@ -638,5 +726,40 @@ class ScheduleService extends ChangeNotifier {
   void removeMeeting(String id) {
     _meetings.removeWhere((m) => m.id == id);
     notifyListeners();
+  }
+
+  Future<void> _loadOfflineMeetings() async {
+    if (!Hive.isBoxOpen(_offlineMeetingsBox)) {
+      await Hive.openBox(_offlineMeetingsBox);
+    }
+    final box = Hive.box(_offlineMeetingsBox);
+    final List offlineMeetings = box.values.toList();
+    for (var m in offlineMeetings) {
+      try {
+        final meeting = MeetingModel.fromJson(Map<String, dynamic>.from(m));
+        if (!_meetings.any((mm) => mm.id == meeting.id)) {
+          _meetings.add(meeting);
+        }
+      } catch (e) {
+        print('Error loading offline meeting: $e');
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> _saveOfflineMeeting(MeetingModel meeting) async {
+    if (!Hive.isBoxOpen(_offlineMeetingsBox)) {
+      await Hive.openBox(_offlineMeetingsBox);
+    }
+    final box = Hive.box(_offlineMeetingsBox);
+    await box.put(meeting.id, meeting.toJson());
+  }
+
+  Future<void> _removeOfflineMeeting(String id) async {
+    if (!Hive.isBoxOpen(_offlineMeetingsBox)) {
+      await Hive.openBox(_offlineMeetingsBox);
+    }
+    final box = Hive.box(_offlineMeetingsBox);
+    await box.delete(id);
   }
 }

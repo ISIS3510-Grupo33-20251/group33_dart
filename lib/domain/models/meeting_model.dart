@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group33_dart/globals.dart';
 
 class MeetingModel {
   final String? id;
@@ -23,16 +24,24 @@ class MeetingModel {
     List<String>? participants,
   }) : participants = participants ?? [];
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toJson({DateTime? date, String? meetingLink}) {
+    // Use provided date or today for ISO8601
+    final now = date ?? DateTime.now();
+    final startDateTime = DateTime(
+        now.year, now.month, now.day, startTime.hour, startTime.minute);
+    final endDateTime =
+        DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
     return {
       'title': name,
       'description': professor,
       'location': room,
       'day_of_week': dayOfWeek,
-      'start_time': _formatTimeOfDay(startTime),
-      'end_time': _formatTimeOfDay(endTime),
+      'start_time': startDateTime.toIso8601String(),
+      'end_time': endDateTime.toIso8601String(),
       'color': '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}',
       'participants': participants,
+      'host_id': userId,
+      'meeting_link': meetingLink ?? '',
     };
   }
 

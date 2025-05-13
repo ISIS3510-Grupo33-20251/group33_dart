@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../services/schedule_service.dart';
 import 'package:intl/intl.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../data/sources/local/cache_service.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});
@@ -107,6 +108,24 @@ class MainMenuPage extends StatelessWidget {
     }
   }
 
+  Future<DateTime?> _getLastSyncTime() async {
+    final cacheService = CacheService();
+    final cached = await cacheService.loadLastScheduleUpdate();
+    if (cached != null && cached['lastSyncTime'] != null) {
+      return DateTime.fromMillisecondsSinceEpoch(cached['lastSyncTime']);
+    }
+    // fallback: try SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final lastSyncTimeStr = prefs.getString('lastSyncTime');
+    if (lastSyncTimeStr != null) {
+      final timestamp = int.tryParse(lastSyncTimeStr);
+      if (timestamp != null) {
+        return DateTime.fromMillisecondsSinceEpoch(timestamp);
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,13 +158,21 @@ class MainMenuPage extends StatelessWidget {
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          _formatLastSyncTime(scheduleService.lastSyncTime),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color.fromARGB(255, 81, 80, 80),
-                            fontWeight: FontWeight.w500,
-                          ),
+                        FutureBuilder<DateTime?>(
+                          future: _getLastSyncTime(),
+                          builder: (context, snapshot) {
+                            final lastSyncTime = snapshot.data;
+                            final syncStatus =
+                                _formatLastSyncTime(lastSyncTime);
+                            return Text(
+                              syncStatus,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color.fromARGB(255, 81, 80, 80),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            );
+                          },
                         ),
                         IconButton(
                           icon: const Icon(Icons.sync, size: 18),
