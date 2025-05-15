@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/profile_service.dart';
 import 'dart:io';
+import '../../services/api_service_adapter.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -41,7 +42,16 @@ class ProfileScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                final hasConnection = await hasInternetConnection();
+                if (!hasConnection) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('There is no internet connection.'),
+                    ),
+                  );
+                  return;
+                }
                 Navigator.pushNamed(context, '/edit_profile');
               },
               child: const Text('Edit Profile'),

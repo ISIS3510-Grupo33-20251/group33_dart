@@ -519,6 +519,25 @@ class ApiServiceAdapter {
     }
     throw Exception('Failed to get meeting participants: ${response.body}');
   }
+
+  // Actualizar el nombre del usuario en el backend
+  Future<void> updateUserName(String userId, String newName) async {
+    // Obtener datos actuales del usuario
+    final user = await fetchUserById(userId);
+    final url = Uri.parse('$backendUrl/users/$userId');
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': newName,
+        'email': user['email'],
+        'password': user['password'],
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update user name: \\${response.body}');
+    }
+  }
 }
 
 Future<bool> hasInternetConnection() async {

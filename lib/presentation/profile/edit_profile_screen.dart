@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../services/profile_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import '../../services/api_service_adapter.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -100,7 +101,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      final hasConnection = await hasInternetConnection();
+                      if (!hasConnection) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('There is no internet connection.'),
+                          ),
+                        );
+                        return;
+                      }
                       context.read<ProfileService>().updateProfile(
                             name: _nameController.text,
                             imageUrl: _imageController.text,
