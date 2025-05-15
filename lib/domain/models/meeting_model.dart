@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group33_dart/globals.dart';
 
 class MeetingModel {
   final String? id;
@@ -9,6 +10,7 @@ class MeetingModel {
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   final Color color;
+  final DateTime startDateTime;
   final List<String> participants;
 
   MeetingModel({
@@ -20,23 +22,32 @@ class MeetingModel {
     required this.startTime,
     required this.endTime,
     required this.color,
+    required this.startDateTime,
     List<String>? participants,
   }) : participants = participants ?? [];
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toJson({String? meetingLink}) {
+    final startDateTime = this.startDateTime;
+    final endDateTime = DateTime(startDateTime.year, startDateTime.month,
+        startDateTime.day, endTime.hour, endTime.minute);
     return {
       'title': name,
       'description': professor,
       'location': room,
       'day_of_week': dayOfWeek,
-      'start_time': _formatTimeOfDay(startTime),
-      'end_time': _formatTimeOfDay(endTime),
+      'start_time': startDateTime.toIso8601String(),
+      'end_time': endDateTime.toIso8601String(),
       'color': '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}',
       'participants': participants,
+      'host_id': userId,
+      'meeting_link': meetingLink ?? '',
     };
   }
 
   factory MeetingModel.fromJson(Map<String, dynamic> json) {
+    final startDate = json['start_time'] != null
+        ? DateTime.parse(json['start_time'])
+        : DateTime.now();
     return MeetingModel(
       id: json['_id'],
       name: json['title'] ?? json['name'] ?? '',
@@ -47,6 +58,7 @@ class MeetingModel {
       endTime: _parseTimeOfDay(json['end_time']),
       color: _parseColor(json['color']),
       participants: List<String>.from(json['participants'] ?? []),
+      startDateTime: startDate,
     );
   }
 
