@@ -105,7 +105,7 @@ class _PendingRequestsState extends State<PendingRequests> {
                   ? const Center(
                       child: Text(
                         'No pending requests.',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                        style: TextStyle(fontSize: 16, color: Colors.grey,fontWeight: FontWeight.bold),
                       ),
                     )
                   : ListView.builder(

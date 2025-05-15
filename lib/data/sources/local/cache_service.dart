@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:group33_dart/presentation/widgets/friends/friend.dart';
+
 
 class CacheService {
   final CacheManager _cache = DefaultCacheManager();
@@ -90,6 +92,36 @@ class CacheService {
 
   Future<void> removeLastScheduleUpdate() async {
     await _cache.removeFile(_lastScheduleUpdateKey);
+  }tatic const String _friendLocationsKey = 'cached_friend_locations';
+
+  Future<void> cacheFriendLocations(Map<String, Friend> friendMap) async {
+    final dataList = friendMap.values.map((f) => f.toJson()).toList();
+    final jsonString = jsonEncode(dataList);
+    final bytes = Uint8List.fromList(utf8.encode(jsonString));
+    await _cache.putFile(
+      _friendLocationsKey,
+      bytes,
+      fileExtension: 'json',
+    );
+  }
+
+  Future<Map<String, Friend>> loadCachedFriendLocations() async {
+    final fileInfo = await _cache.getFileFromCache(_friendLocationsKey);
+    if (fileInfo == null) return {};
+
+    try {
+      final jsonString = await fileInfo.file.readAsString();
+      final List<dynamic> list = jsonDecode(jsonString);
+      final Map<String, Friend> result = {};
+      for (var item in list) {
+        final friend = Friend.fromJson(item);
+        result[friend.email] = friend;
+      }
+      return result;
+    } catch (e) {
+      print('Error loading cached friend locations: $e');
+      return {};
+    }
   }
 
   Future<void> cacheProfileImage(String imagePath) async {
@@ -111,4 +143,3 @@ class CacheService {
       return null;
     }
   }
-}

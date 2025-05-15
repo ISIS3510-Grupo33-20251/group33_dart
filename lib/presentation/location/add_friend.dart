@@ -127,7 +127,7 @@ class _AddFriendState extends State<AddFriend> {
           'Add Friend',
           style: TextStyle(
             color: Colors.black,
-            fontWeight: FontWeight.w400,
+            fontWeight: FontWeight.bold,
             fontSize: 22,
           ),
         ),
@@ -143,7 +143,7 @@ class _AddFriendState extends State<AddFriend> {
               controller: _emailController,
               decoration: const InputDecoration(
                 labelText: 'Friend\'s email',
-                labelStyle: TextStyle(color: Colors.grey),
+                labelStyle: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
                 enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: Colors.grey),
                 ),
@@ -171,7 +171,7 @@ class _AddFriendState extends State<AddFriend> {
                       'Send Friend Request',
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
             ),
@@ -184,6 +184,7 @@ class _AddFriendState extends State<AddFriend> {
                       ? Colors.red
                       : Colors.green,
                   fontSize: 14,
+                  fontWeight: FontWeight.bold
                 ),
                 textAlign: TextAlign.center,
               ),
