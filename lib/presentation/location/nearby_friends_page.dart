@@ -8,11 +8,15 @@ import 'package:group33_dart/services/api_service_adapter.dart';
 import 'add_friend_popup.dart';
 import 'package:group33_dart/data/sources/local/cache_service.dart';
 import 'package:group33_dart/services/connectivity_service.dart';
+import 'package:group33_dart/data/sources/local/friend_lru_cache.dart';
+
 
 final ApiServiceAdapter apiServiceAdapter = ApiServiceAdapter(backendUrl: backendUrl);
 final LocalStorageService localStorage = LocalStorageService();
 final CacheService cache = CacheService();
-final ConnectivityService connectivityService = ConnectivityService(); 
+final ConnectivityService connectivityService = ConnectivityService();
+final FriendLRUCache friendCache = FriendLRUCache(capacity: 10);
+
 
 class NearbyFriendsPage extends StatefulWidget {
   const NearbyFriendsPage({Key? key}) : super(key: key);
@@ -36,9 +40,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
   Future<void> _initialize() async {
     try {
       final hasConnection = await connectivityService.checkConnectivity();
-      if (!hasConnection) {
-        await connectivityService.showNoInternetDialog(context);
-      }
+      
 
       Position? position;
       try {
@@ -111,7 +113,9 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
             friend.latitude,
             friend.longitude,
           );
+           friendCache.put(friend.email, friend);
         }
+       
         fetchedFriends.sort((a, b) => a.distance.compareTo(b.distance));
       }
 
@@ -120,7 +124,9 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
       setState(() {
         friends = fetchedFriends;
         isLoading = false;
+        error = '';
       });
+      await cache.cacheFriendLocations(friendCache.cacheMap);
     } catch (e) {
       final cachedLocation = await cache.loadCachedUserLocation();
       List<Map<String, dynamic>> cached = await localStorage.loadFriends();
@@ -129,9 +135,8 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
       if (cachedLocation != null &&
           cachedLocation['latitude'] != null &&
           cachedLocation['longitude'] != null) {
-        final lat = cachedLocation['latitude'] as double;
+        final lat = cachedLocation['latitude'] as double; 
         final lon = cachedLocation['longitude'] as double;
-
         for (var friend in cachedFriends) {
           friend.distance = Geolocator.distanceBetween(
             lat,
@@ -146,7 +151,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
 
       setState(() {
         friends = cachedFriends;
-        error = 'No internet. Showing distance based on your last location with internet.';
+        error = 'No internet. Showing distance based on your last location with internet and your friends last known location.';
         isLoading = false;
         locationPermissionDenied = true;
       });
@@ -175,25 +180,58 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
           ),
         ),
         actions: [
-          AddFriendPopup(userId: userId),
-        ],
+  IconButton(
+    icon: const Icon(Icons.refresh, color: Colors.black),
+    onPressed: () async {
+      setState(() {
+        isLoading = true;
+      });
+
+      final position = await _getLocation();
+      if (position != null) {
+        await _updateUserLocation(position);
+      }
+
+      await _fetchFriends(position);
+    },
+  ),
+  AddFriendPopup(userId: userId),
+],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+    ? const Center(child: CircularProgressIndicator())
+    : Column(
+        children: [
+          if (error.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                error,
+                style: const TextStyle(color: Colors.red,fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
               children: [
-                if (error.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Text(
-                      error,
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
+                const Icon(Icons.people, color: Colors.deepPurple),
+                const SizedBox(width: 8),
+                Text(
+                  'Total friends: ${friends.length}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
-                Expanded(child: FriendList(friends: friends)),
+                ),
               ],
             ),
+          ),
+          Expanded(child: FriendList(friends: friends)),
+        ],
+      ),
+
     );
   }
 }

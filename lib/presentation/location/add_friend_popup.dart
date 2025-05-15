@@ -12,11 +12,11 @@ class AddFriendPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.add, color: Colors.black),
-      color: Colors.white, // Fondo blanco
+      color: Colors.white, 
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      elevation: 8, // Sombra suave
+      elevation: 8, 
       onSelected: (value) {
         if (value == 'add') {
           Navigator.push(
