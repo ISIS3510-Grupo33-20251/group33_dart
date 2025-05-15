@@ -108,13 +108,33 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             },
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            weekRange,
-                            style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.black54,
-                                fontWeight: FontWeight.w500),
-                            overflow: TextOverflow.ellipsis,
+                          InkWell(
+                            onTap: () async {
+                              // Selector de fecha para elegir la semana
+                              final DateTime? picked = await showDatePicker(
+                                context: context,
+                                initialDate: _selectedMonday,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (picked != null) {
+                                // Calcular el lunes de la semana seleccionada
+                                final monday = picked.subtract(
+                                    Duration(days: picked.weekday - 1));
+                                setState(() {
+                                  _selectedMonday = monday;
+                                });
+                              }
+                            },
+                            child: Text(
+                              weekRange,
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w500,
+                                  decoration: TextDecoration.underline),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           IconButton(
