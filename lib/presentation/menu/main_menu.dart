@@ -155,32 +155,20 @@ class MainMenuPage extends StatelessWidget {
                         color: Colors.black)),
                 Consumer<ScheduleService>(
                   builder: (context, scheduleService, child) {
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        FutureBuilder<DateTime?>(
-                          future: _getLastSyncTime(),
-                          builder: (context, snapshot) {
-                            final lastSyncTime = snapshot.data;
-                            final syncStatus =
-                                _formatLastSyncTime(lastSyncTime);
-                            return Text(
-                              syncStatus,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color.fromARGB(255, 81, 80, 80),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.sync, size: 18),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => _handleSync(context),
-                        ),
-                      ],
+                    return FutureBuilder<DateTime?>(
+                      future: _getLastSyncTime(),
+                      builder: (context, snapshot) {
+                        final lastSyncTime = snapshot.data;
+                        final syncStatus = _formatLastSyncTime(lastSyncTime);
+                        return Text(
+                          syncStatus,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color.fromARGB(255, 81, 80, 80),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -189,6 +177,11 @@ class MainMenuPage extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sync, size: 22),
+            onPressed: () => _handleSync(context),
+            tooltip: 'Sync now',
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 10),
             child: PopupMenuWidget(
