@@ -20,7 +20,9 @@ class ProfileScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+          title: const Text('Profile',
+              style: TextStyle(fontWeight: FontWeight.bold))),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -39,7 +41,8 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text('Semester: ${profile.semester}',
-                style: const TextStyle(fontSize: 18)),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () async {
@@ -54,7 +57,8 @@ class ProfileScreen extends StatelessWidget {
                 }
                 Navigator.pushNamed(context, '/edit_profile');
               },
-              child: const Text('Edit Profile'),
+              child: const Text('Edit Profile',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),

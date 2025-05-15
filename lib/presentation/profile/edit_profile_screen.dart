@@ -45,7 +45,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final profile = context.watch<ProfileService>().profile;
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Profile')),
+      appBar: AppBar(
+          title: const Text('Edit Profile',
+              style: TextStyle(fontWeight: FontWeight.bold))),
       body: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
           padding: EdgeInsets.only(
@@ -88,15 +90,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Name'),
+                    decoration: const InputDecoration(
+                        labelText: 'Name',
+                        labelStyle: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   TextField(
                     controller: _imageController,
-                    decoration: const InputDecoration(labelText: 'Image URL'),
+                    decoration: const InputDecoration(
+                        labelText: 'Image URL',
+                        labelStyle: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   TextField(
                     controller: _semesterController,
-                    decoration: const InputDecoration(labelText: 'Semester'),
+                    decoration: const InputDecoration(
+                        labelText: 'Semester',
+                        labelStyle: TextStyle(fontWeight: FontWeight.bold)),
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 24),
@@ -119,7 +127,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           );
                       Navigator.pop(context);
                     },
-                    child: const Text('Save'),
+                    child: const Text('Save',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
