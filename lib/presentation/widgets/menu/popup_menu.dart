@@ -14,6 +14,7 @@ class PopupMenuWidget extends StatelessWidget {
       elevation: 8,
       onSelected: onSelected,
       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+        _buildStyledItem('Profile'),
         _buildStyledItem('Friends'),
         _buildStyledItem('Share'),
         _buildStyledItem('Settings'),
