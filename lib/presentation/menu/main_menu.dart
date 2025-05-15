@@ -35,7 +35,9 @@ class MainMenuPage extends StatelessWidget {
   }
 
   void handleMenuSelection(BuildContext context, String value) {
-    if (value == 'friends') {
+    if (value == 'profile') {
+      Navigator.pushNamed(context, '/profile');
+    } else if (value == 'friends') {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const NearbyFriendsPage()),
