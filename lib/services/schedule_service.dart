@@ -58,6 +58,7 @@ class ScheduleService extends ChangeNotifier {
   List<ClassModel> get classes => _classes;
   DateTime? get lastSyncTime => _syncTimeCache.get(_lastSyncKey);
   String? get scheduleId => _scheduleId;
+  List<MeetingModel> get meetings => _meetings;
 
   static const String _offlineMeetingsBox = 'offline_meetings_box';
 

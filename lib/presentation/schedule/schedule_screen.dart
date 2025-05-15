@@ -175,6 +175,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 // FAB para crear meetings
                 Positioned(
                   right: 16,
+                  bottom: 80,
+                  child: FloatingActionButton(
+                    heroTag: 'nextMeetingBtn',
+                    mini: true,
+                    backgroundColor: Colors.deepPurple,
+                    child: const Icon(Icons.event_available),
+                    onPressed: _showNextMeetingDialog,
+                  ),
+                ),
+                Positioned(
+                  right: 16,
                   bottom: 16,
                   child: FloatingActionButton(
                     onPressed: () => _showAddDialog(),
@@ -1115,5 +1126,67 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   // NUEVO: Formato corto de fecha para el header
   String _formatDateShort(DateTime date) {
     return '${date.month}/${date.day}';
+  }
+
+  // Función para mostrar la próxima reunión
+  void _showNextMeetingDialog() {
+    final scheduleService = context.read<ScheduleService>();
+    final now = DateTime.now();
+    // Buscar la próxima reunión después de ahora
+    final allMeetings = scheduleService.meetings;
+    final upcoming = allMeetings
+        .where((m) => m.startDateTime.isAfter(now))
+        .toList()
+      ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+
+    if (upcoming.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Next Meeting'),
+          content: const Text('You have no upcoming meetings.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final next = upcoming.first;
+    final dateStr =
+        '${next.startDateTime.day}/${next.startDateTime.month}/${next.startDateTime.year}';
+    final timeStr =
+        '${next.startTime.format(context)} - ${next.endTime.format(context)}';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Next Meeting'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Title: ${next.name}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Date: $dateStr'),
+            Text('Time: $timeStr'),
+            if (next.room.isNotEmpty) Text('Location: ${next.room}'),
+            if (next.professor.isNotEmpty)
+              Text('Description: ${next.professor}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }

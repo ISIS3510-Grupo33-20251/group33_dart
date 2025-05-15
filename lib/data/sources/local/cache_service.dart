@@ -7,6 +7,7 @@ import 'package:group33_dart/presentation/widgets/friends/friend.dart';
 class CacheService {
   final CacheManager _cache = DefaultCacheManager();
   static const String _lastScheduleUpdateKey = 'last_schedule_update';
+  static const String _profileImageKey = 'profile_image_path';
 
   Future<void> cacheFlashcard(
       String key, List<Map<String, dynamic>> data) async {
@@ -91,38 +92,54 @@ class CacheService {
 
   Future<void> removeLastScheduleUpdate() async {
     await _cache.removeFile(_lastScheduleUpdateKey);
+  }tatic const String _friendLocationsKey = 'cached_friend_locations';
+
+  Future<void> cacheFriendLocations(Map<String, Friend> friendMap) async {
+    final dataList = friendMap.values.map((f) => f.toJson()).toList();
+    final jsonString = jsonEncode(dataList);
+    final bytes = Uint8List.fromList(utf8.encode(jsonString));
+    await _cache.putFile(
+      _friendLocationsKey,
+      bytes,
+      fileExtension: 'json',
+    );
   }
-  static const String _friendLocationsKey = 'cached_friend_locations';
 
-Future<void> cacheFriendLocations(Map<String, Friend> friendMap) async {
-  // Convertir a lista de mapas JSON
-  final dataList = friendMap.values.map((f) => f.toJson()).toList();
-  final jsonString = jsonEncode(dataList);
-  final bytes = Uint8List.fromList(utf8.encode(jsonString));
-  await _cache.putFile(
-    _friendLocationsKey,
-    bytes,
-    fileExtension: 'json',
-  );
-}
+  Future<Map<String, Friend>> loadCachedFriendLocations() async {
+    final fileInfo = await _cache.getFileFromCache(_friendLocationsKey);
+    if (fileInfo == null) return {};
 
-Future<Map<String, Friend>> loadCachedFriendLocations() async {
-  final fileInfo = await _cache.getFileFromCache(_friendLocationsKey);
-  if (fileInfo == null) return {};
-
-  try {
-    final jsonString = await fileInfo.file.readAsString();
-    final List<dynamic> list = jsonDecode(jsonString);
-    final Map<String, Friend> result = {};
-    for (var item in list) {
-      final friend = Friend.fromJson(item);
-      result[friend.email] = friend;
+    try {
+      final jsonString = await fileInfo.file.readAsString();
+      final List<dynamic> list = jsonDecode(jsonString);
+      final Map<String, Friend> result = {};
+      for (var item in list) {
+        final friend = Friend.fromJson(item);
+        result[friend.email] = friend;
+      }
+      return result;
+    } catch (e) {
+      print('Error loading cached friend locations: $e');
+      return {};
     }
-    return result;
-  } catch (e) {
-    print('Error loading cached friend locations: $e');
-    return {};
   }
-}
 
-}
+  Future<void> cacheProfileImage(String imagePath) async {
+    await _cache.putFile(
+      _profileImageKey,
+      Uint8List.fromList(imagePath.codeUnits),
+      fileExtension: 'txt',
+    );
+  }
+
+  Future<String?> loadCachedProfileImage() async {
+    final fileInfo = await _cache.getFileFromCache(_profileImageKey);
+    if (fileInfo == null) return null;
+    try {
+      final path = await fileInfo.file.readAsString();
+      return path;
+    } catch (e) {
+      print('Error loading cached profile image path: $e');
+      return null;
+    }
+  }
