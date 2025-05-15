@@ -174,7 +174,7 @@ class MainMenuPage extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color.fromARGB(255, 81, 80, 80),
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.bold,
                           ),
                         );
                       },

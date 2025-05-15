@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/profile_service.dart';
 import 'dart:io';
+import '../../services/api_service_adapter.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -19,7 +20,9 @@ class ProfileScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+          title: const Text('Profile',
+              style: TextStyle(fontWeight: FontWeight.bold))),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -38,13 +41,24 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text('Semester: ${profile.semester}',
-                style: const TextStyle(fontSize: 18)),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                final hasConnection = await hasInternetConnection();
+                if (!hasConnection) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('There is no internet connection.'),
+                    ),
+                  );
+                  return;
+                }
                 Navigator.pushNamed(context, '/edit_profile');
               },
-              child: const Text('Edit Profile'),
+              child: const Text('Edit Profile',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),

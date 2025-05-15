@@ -131,7 +131,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                               style: TextStyle(
                                   fontSize: 15,
                                   color: Colors.black54,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: FontWeight.bold,
                                   decoration: TextDecoration.underline),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -228,6 +228,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -259,8 +260,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       dayNumbers[index],
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight:
-                            isCurrentDay ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: FontWeight.bold,
                         color: isCurrentDay ? Colors.blue : Colors.grey[600],
                       ),
                     ),
@@ -268,8 +268,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       dayAbbr[index],
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight:
-                            isCurrentDay ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: FontWeight.bold,
                         color: isCurrentDay ? Colors.blue : Colors.grey[600],
                       ),
                     ),
@@ -367,6 +366,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -447,7 +447,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   classModel.name,
                   style: const TextStyle(
                     color: Colors.black87,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     fontSize: 11,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -461,7 +461,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     style: const TextStyle(
                       color: Colors.black54,
                       fontSize: 10,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -472,6 +472,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     style: const TextStyle(
                       color: Colors.black54,
                       fontSize: 9,
+                      fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -529,7 +530,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   meetingModel.name,
                   style: const TextStyle(
                     color: Colors.black87,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                     fontSize: 11,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -543,7 +544,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     style: const TextStyle(
                       color: Colors.black54,
                       fontSize: 10,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -554,6 +555,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     style: const TextStyle(
                       color: Colors.black54,
                       fontSize: 9,
+                      fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -632,7 +634,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(meetingToEdit == null ? 'New Meeting' : 'Edit Meeting'),
+          title: Text(meetingToEdit == null ? 'New Meeting' : 'Edit Meeting',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -643,6 +646,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Title',
                     border: OutlineInputBorder(),
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -651,6 +655,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Description',
                     border: OutlineInputBorder(),
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   maxLines: 3,
                 ),
@@ -660,6 +665,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Location',
                     border: OutlineInputBorder(),
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -668,6 +674,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Meeting Link (optional)',
                     border: OutlineInputBorder(),
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -711,7 +718,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
                     child: Text(
                       '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -721,7 +729,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Expanded(
                       child: TextButton.icon(
                         icon: const Icon(Icons.access_time),
-                        label: Text('Start: ${_startTime.format(context)}'),
+                        label: Text('Start: ${_startTime.format(context)}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         onPressed: () async {
                           final TimeOfDay? time = await showTimePicker(
                             context: context,
@@ -737,7 +747,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Expanded(
                       child: TextButton.icon(
                         icon: const Icon(Icons.access_time),
-                        label: Text('End: ${_endTime.format(context)}'),
+                        label: Text('End: ${_endTime.format(context)}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         onPressed: () async {
                           final TimeOfDay? time = await showTimePicker(
                             context: context,
@@ -752,7 +764,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text('Color', style: TextStyle(fontSize: 16)),
+                const Text('Color',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 _buildColorPicker(setState),
               ],
@@ -903,7 +917,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(classToEdit == null ? 'New Class' : 'Edit Class'),
+          title: Text(classToEdit == null ? 'New Class' : 'Edit Class',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -914,6 +929,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Class Name',
                     border: OutlineInputBorder(),
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -922,6 +938,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Professor',
                     border: OutlineInputBorder(),
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -930,6 +947,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Room',
                     border: OutlineInputBorder(),
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -938,6 +956,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Day',
                     border: OutlineInputBorder(),
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('Monday')),
@@ -958,7 +977,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Expanded(
                       child: TextButton.icon(
                         icon: const Icon(Icons.access_time),
-                        label: Text('Start: ${_startTime.format(context)}'),
+                        label: Text('Start: ${_startTime.format(context)}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         onPressed: () async {
                           final TimeOfDay? time = await showTimePicker(
                             context: context,
@@ -974,7 +995,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Expanded(
                       child: TextButton.icon(
                         icon: const Icon(Icons.access_time),
-                        label: Text('End: ${_endTime.format(context)}'),
+                        label: Text('End: ${_endTime.format(context)}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         onPressed: () async {
                           final TimeOfDay? time = await showTimePicker(
                             context: context,
@@ -989,7 +1012,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text('Color', style: TextStyle(fontSize: 16)),
+                const Text('Color',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 _buildColorPicker(setState),
               ],
