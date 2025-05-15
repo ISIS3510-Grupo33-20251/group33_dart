@@ -31,14 +31,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      // Validar que el archivo sea una imagen
-      final mimeType = pickedFile.mimeType;
-      if (mimeType == null || !mimeType.startsWith('image/')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a valid image file.')),
-        );
-        return;
-      }
       setState(() {
         _pickedImage = File(pickedFile.path);
         _imageController.text = pickedFile.path;
@@ -53,60 +45,76 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final profile = context.watch<ProfileService>().profile;
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Profile')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: _pickedImage != null
-                    ? FileImage(_pickedImage!)
-                    : (profile.imageUrl.startsWith('http')
-                        ? NetworkImage(profile.imageUrl)
-                        : FileImage(File(profile.imageUrl))) as ImageProvider,
-                child: Align(
-                  alignment: Alignment.bottomRight,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 24.0,
+            right: 24.0,
+            top: 24.0,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundImage: _pickedImage != null
+                          ? FileImage(_pickedImage!)
+                          : (profile.imageUrl.startsWith('http')
+                                  ? NetworkImage(profile.imageUrl)
+                                  : FileImage(File(profile.imageUrl)))
+                              as ImageProvider,
+                      child: Align(
+                        alignment: Alignment.bottomRight,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          child: const Icon(Icons.camera_alt,
+                              size: 22, color: Colors.black),
+                        ),
+                      ),
                     ),
-                    padding: const EdgeInsets.all(4),
-                    child: const Icon(Icons.camera_alt,
-                        size: 22, color: Colors.black),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: 'Name'),
+                  ),
+                  TextField(
+                    controller: _imageController,
+                    decoration: const InputDecoration(labelText: 'Image URL'),
+                  ),
+                  TextField(
+                    controller: _semesterController,
+                    decoration: const InputDecoration(labelText: 'Semester'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<ProfileService>().updateProfile(
+                            name: _nameController.text,
+                            imageUrl: _imageController.text,
+                            semester:
+                                int.tryParse(_semesterController.text) ?? 1,
+                          );
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: _imageController,
-              decoration: const InputDecoration(labelText: 'Image URL'),
-            ),
-            TextField(
-              controller: _semesterController,
-              decoration: const InputDecoration(labelText: 'Semester'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                context.read<ProfileService>().updateProfile(
-                      name: _nameController.text,
-                      imageUrl: _imageController.text,
-                      semester: int.tryParse(_semesterController.text) ?? 1,
-                    );
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
+          ),
         ),
       ),
     );
