@@ -92,7 +92,8 @@ class CacheService {
 
   Future<void> removeLastScheduleUpdate() async {
     await _cache.removeFile(_lastScheduleUpdateKey);
-  }tatic const String _friendLocationsKey = 'cached_friend_locations';
+  }
+  static const String _friendLocationsKey = 'cached_friend_locations';
 
   Future<void> cacheFriendLocations(Map<String, Friend> friendMap) async {
     final dataList = friendMap.values.map((f) => f.toJson()).toList();
@@ -143,3 +144,4 @@ class CacheService {
       return null;
     }
   }
+}
