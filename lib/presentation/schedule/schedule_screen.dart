@@ -26,10 +26,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Timer? _timer;
   DateTime _now = DateTime.now();
 
+  // NUEVO: Estado para la semana seleccionada
+  late DateTime _selectedMonday;
+
   @override
   void initState() {
     super.initState();
     _now = DateTime.now();
+    // Calcular el lunes de la semana actual
+    _selectedMonday = _now.subtract(Duration(days: _now.weekday - 1));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _timer = Timer.periodic(const Duration(minutes: 1), (Timer t) {
         if (mounted) {
@@ -70,11 +75,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Calcular el rango de la semana seleccionada
+    final weekStart = _selectedMonday;
+    final weekEnd = _selectedMonday.add(const Duration(days: 4));
+    String weekRange =
+        '${_formatDateShort(weekStart)} - ${_formatDateShort(weekEnd)}';
     return Scaffold(
       backgroundColor: Colors.white,
-      // appBar: AppBar(
-      //   title: const Text('Schedule'),
-      // ),
       body: Consumer<ScheduleService>(
         builder: (context, scheduleService, child) {
           return SizedBox(
@@ -84,6 +91,45 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               children: [
                 Column(
                   children: [
+                    // --- NUEVO: Navegación de semanas compacta ---
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: () {
+                              setState(() {
+                                _selectedMonday = _selectedMonday
+                                    .subtract(const Duration(days: 7));
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            weekRange,
+                            style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: () {
+                              setState(() {
+                                _selectedMonday = _selectedMonday
+                                    .add(const Duration(days: 7));
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    // --- FIN NUEVO ---
                     const SizedBox(height: 1),
                     _buildWeekDays(),
                     Expanded(
@@ -126,11 +172,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildWeekDays() {
     List<String> dayAbbr = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
-    // Calculate the dates for this week
-    final now = DateTime.now();
-    final monday = now.subtract(Duration(days: now.weekday - 1));
-    List<String> dayNumbers = List.generate(
-        5, (index) => (monday.add(Duration(days: index))).day.toString());
+    // Calcular los días de la semana seleccionada
+    List<String> dayNumbers = List.generate(5,
+        (index) => (_selectedMonday.add(Duration(days: index))).day.toString());
     int currentDayIndex = _getCurrentDayIndex();
 
     return Container(
@@ -157,7 +201,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
           ),
           ...List.generate(5, (index) {
-            bool isCurrentDay = index == currentDayIndex;
+            // Marcar el día actual solo si la semana seleccionada es la actual
+            bool isCurrentDay = false;
+            final today = DateTime.now();
+            final thisDay = _selectedMonday.add(Duration(days: index));
+            if (today.year == thisDay.year &&
+                today.month == thisDay.month &&
+                today.day == thisDay.day) {
+              isCurrentDay = true;
+            }
             return Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -403,7 +455,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildMeetingBlock(int hour, int dayIndex) {
     final scheduleService = context.read<ScheduleService>();
-    final meetings = scheduleService.getMeetingsForDayAndHour(dayIndex, hour);
+    // Calcular la fecha real de la celda
+    final cellDate = _selectedMonday.add(Duration(days: dayIndex));
+    final meetings = scheduleService.getMeetingsForDateAndHour(cellDate, hour);
 
     if (meetings.isEmpty) {
       return const SizedBox.shrink();
@@ -465,7 +519,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ),
                 if (duration > 25)
                   Text(
-                    '${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
+                    '	${startHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')} - ${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}',
                     style: const TextStyle(
                       color: Colors.black54,
                       fontSize: 9,
@@ -512,6 +566,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _showMeetingDialog([MeetingModel? meetingToEdit]) {
+    // Variable para la fecha seleccionada
+    DateTime selectedDate = _selectedMonday.add(Duration(days: _selectedDay));
+
     setState(() {
       if (meetingToEdit != null) {
         _titleController.text = meetingToEdit.name;
@@ -522,6 +579,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         _startTime = meetingToEdit.startTime;
         _endTime = meetingToEdit.endTime;
         _selectedDay = meetingToEdit.dayOfWeek;
+        // Si hay una fecha inicial en el meeting, usarla
+        if (meetingToEdit.startDateTime != null) {
+          selectedDate = meetingToEdit.startDateTime;
+        }
       } else {
         _titleController.clear();
         _descriptionController.clear();
@@ -531,6 +592,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         _startTime = TimeOfDay(hour: _now.hour, minute: 0);
         _endTime = TimeOfDay(hour: _now.hour + 1, minute: 0);
         _selectedDay = _getCurrentDayIndex() != -1 ? _getCurrentDayIndex() : 0;
+        // Usar la fecha de la semana seleccionada + día seleccionado
+        selectedDate = _selectedMonday.add(Duration(days: _selectedDay));
       }
     });
 
@@ -577,24 +640,49 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<int>(
-                  value: _selectedDay,
-                  decoration: const InputDecoration(
-                    labelText: 'Day',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 0, child: Text('Monday')),
-                    DropdownMenuItem(value: 1, child: Text('Tuesday')),
-                    DropdownMenuItem(value: 2, child: Text('Wednesday')),
-                    DropdownMenuItem(value: 3, child: Text('Thursday')),
-                    DropdownMenuItem(value: 4, child: Text('Friday')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _selectedDay = value);
+                // Reemplazamos el DropdownButtonFormField por un selector de fecha
+                InkWell(
+                  onTap: () async {
+                    // Verificar la fecha seleccionada para asegurar que está dentro del rango válido
+                    DateTime validInitialDate = selectedDate;
+                    DateTime firstDate = DateTime(2020);
+                    DateTime lastDate = DateTime(2030);
+
+                    // Si la fecha seleccionada es posterior a la fecha límite, usar la fecha límite
+                    if (validInitialDate.isAfter(lastDate)) {
+                      validInitialDate = lastDate;
+                    }
+                    // Si la fecha seleccionada es anterior a la fecha inicial, usar la fecha inicial
+                    if (validInitialDate.isBefore(firstDate)) {
+                      validInitialDate = firstDate;
+                    }
+
+                    final DateTime? picked = await showDatePicker(
+                      context: context,
+                      initialDate: validInitialDate,
+                      firstDate: firstDate,
+                      lastDate: lastDate,
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        selectedDate = picked;
+                        // Actualizar _selectedDay para mantener coherencia
+                        _selectedDay =
+                            (picked.weekday - 1) % 7; // 0 = Monday, 6 = Sunday
+                      });
                     }
                   },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Date',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -692,18 +780,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   return;
                 }
 
+                // Crear fechas de inicio y fin usando la fecha seleccionada
                 final startDateTime = DateTime(
-                  _now.year,
-                  _now.month,
-                  _now.day + (_selectedDay - _getCurrentDayIndex()),
+                  selectedDate.year,
+                  selectedDate.month,
+                  selectedDate.day,
                   _startTime.hour,
                   _startTime.minute,
                 );
 
                 final endDateTime = DateTime(
-                  _now.year,
-                  _now.month,
-                  _now.day + (_selectedDay - _getCurrentDayIndex()),
+                  selectedDate.year,
+                  selectedDate.month,
+                  selectedDate.day,
                   _endTime.hour,
                   _endTime.minute,
                 );
@@ -711,7 +800,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 context.read<ScheduleService>().selectedColor = _selectedColor;
 
                 final meetingData = {
-                  // No enviar '_id'
                   'title': title,
                   'description': _descriptionController.text.trim(),
                   'start_time': startDateTime.toIso8601String(),
@@ -721,8 +809,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   'host_id': userId,
                   'participants': [],
                   'color':
-                      '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}', // HEX
-                  'day_of_week': _selectedDay, // <--- AGREGADO
+                      '#${_selectedColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
+                  'day_of_week': _selectedDay,
                 };
 
                 try {
@@ -1002,5 +1090,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ],
       ),
     );
+  }
+
+  // NUEVO: Formato corto de fecha para el header
+  String _formatDateShort(DateTime date) {
+    return '${date.month}/${date.day}';
   }
 }

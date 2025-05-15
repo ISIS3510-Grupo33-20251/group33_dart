@@ -288,6 +288,7 @@ class ScheduleService extends ChangeNotifier {
                 startTime: classModel.startTime,
                 endTime: classModel.endTime,
                 color: classModel.color,
+                startDateTime: DateTime.now(),
               );
 
               final createdMeeting =
@@ -463,6 +464,7 @@ class ScheduleService extends ChangeNotifier {
         startTime: classModel.startTime,
         endTime: classModel.endTime,
         color: classModel.color,
+        startDateTime: DateTime.now(),
       );
 
       if (!_isOnline) {
@@ -640,6 +642,7 @@ class ScheduleService extends ChangeNotifier {
           endTime:
               TimeOfDay(hour: endDateTime.hour, minute: endDateTime.minute),
           color: selectedColor ?? Colors.blue,
+          startDateTime: startDateTime,
         );
         addMeeting(meetingModel);
         await _saveOfflineMeeting(meetingModel);
@@ -674,6 +677,7 @@ class ScheduleService extends ChangeNotifier {
             TimeOfDay(hour: startDateTime.hour, minute: startDateTime.minute),
         endTime: TimeOfDay(hour: endDateTime.hour, minute: endDateTime.minute),
         color: selectedColor ?? Colors.blue,
+        startDateTime: startDateTime,
       );
       addMeeting(meetingModel);
       // Remove from offline if present
@@ -761,5 +765,16 @@ class ScheduleService extends ChangeNotifier {
     }
     final box = Hive.box(_offlineMeetingsBox);
     await box.delete(id);
+  }
+
+  // NUEVO: Meetings por fecha y hora exacta
+  List<MeetingModel> getMeetingsForDateAndHour(DateTime date, int hour) {
+    return _meetings
+        .where((m) =>
+            m.startDateTime.year == date.year &&
+            m.startDateTime.month == date.month &&
+            m.startDateTime.day == date.day &&
+            m.startDateTime.hour == hour)
+        .toList();
   }
 }

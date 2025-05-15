@@ -10,6 +10,7 @@ class MeetingModel {
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   final Color color;
+  final DateTime startDateTime;
   final List<String> participants;
 
   MeetingModel({
@@ -21,16 +22,14 @@ class MeetingModel {
     required this.startTime,
     required this.endTime,
     required this.color,
+    required this.startDateTime,
     List<String>? participants,
   }) : participants = participants ?? [];
 
-  Map<String, dynamic> toJson({DateTime? date, String? meetingLink}) {
-    // Use provided date or today for ISO8601
-    final now = date ?? DateTime.now();
-    final startDateTime = DateTime(
-        now.year, now.month, now.day, startTime.hour, startTime.minute);
-    final endDateTime =
-        DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
+  Map<String, dynamic> toJson({String? meetingLink}) {
+    final startDateTime = this.startDateTime;
+    final endDateTime = DateTime(startDateTime.year, startDateTime.month,
+        startDateTime.day, endTime.hour, endTime.minute);
     return {
       'title': name,
       'description': professor,
@@ -46,6 +45,9 @@ class MeetingModel {
   }
 
   factory MeetingModel.fromJson(Map<String, dynamic> json) {
+    final startDate = json['start_time'] != null
+        ? DateTime.parse(json['start_time'])
+        : DateTime.now();
     return MeetingModel(
       id: json['_id'],
       name: json['title'] ?? json['name'] ?? '',
@@ -56,6 +58,7 @@ class MeetingModel {
       endTime: _parseTimeOfDay(json['end_time']),
       color: _parseColor(json['color']),
       participants: List<String>.from(json['participants'] ?? []),
+      startDateTime: startDate,
     );
   }
 
