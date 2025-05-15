@@ -572,14 +572,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create New'),
+        title: const Text('Create New',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 28)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.calendar_today),
-              title: const Text('Meeting'),
-              subtitle: const Text('Create a new meeting'),
+              title: const Text('Meeting',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              subtitle: const Text('Create a new meeting',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               onTap: () {
                 Navigator.pop(context);
                 _showMeetingDialog();
@@ -587,8 +590,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.class_),
-              title: const Text('Class'),
-              subtitle: const Text('Coming soon...'),
+              title: const Text('Class',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Colors.black26)),
+              subtitle: const Text('Coming soon...',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.black26)),
               enabled: false,
               onTap: null,
             ),
@@ -1168,12 +1179,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Next Meeting'),
-          content: const Text('You have no upcoming meetings.'),
+          title: const Text('Next Meeting',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 28)),
+          content: const Text('You have no upcoming meetings.',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              child: const Text('OK',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ],
         ),
