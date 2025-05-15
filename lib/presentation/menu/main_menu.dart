@@ -8,6 +8,7 @@ import '../../services/schedule_service.dart';
 import 'package:intl/intl.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../data/sources/local/cache_service.dart';
+import '../../services/profile_service.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});
@@ -139,13 +140,19 @@ class MainMenuPage extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.only(bottom: 1),
-              child: const Text('SEMESTER 1',
-                  style: TextStyle(
-                      color: Color.fromARGB(255, 81, 80, 80),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold)),
+            Consumer<ProfileService>(
+              builder: (context, profileService, child) {
+                return Container(
+                  padding: const EdgeInsets.only(bottom: 1),
+                  child: Text(
+                    'SEMESTER ${profileService.profile.semester}',
+                    style: const TextStyle(
+                        color: Color.fromARGB(255, 81, 80, 80),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
+                  ),
+                );
+              },
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

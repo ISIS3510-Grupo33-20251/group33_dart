@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/profile_service.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -13,6 +15,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _imageController;
   late TextEditingController _semesterController;
+  File? _pickedImage;
 
   @override
   void initState() {
@@ -24,14 +27,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         TextEditingController(text: profile.semester.toString());
   }
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      // Validar que el archivo sea una imagen
+      final mimeType = pickedFile.mimeType;
+      if (mimeType == null || !mimeType.startsWith('image/')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a valid image file.')),
+        );
+        return;
+      }
+      setState(() {
+        _pickedImage = File(pickedFile.path);
+        _imageController.text = pickedFile.path;
+      });
+      // Guardar la imagen en el servicio y actualizar el perfil
+      await context.read<ProfileService>().setProfileImage(_pickedImage!);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final profile = context.watch<ProfileService>().profile;
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Profile')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
+            GestureDetector(
+              onTap: _pickImage,
+              child: CircleAvatar(
+                radius: 50,
+                backgroundImage: _pickedImage != null
+                    ? FileImage(_pickedImage!)
+                    : (profile.imageUrl.startsWith('http')
+                        ? NetworkImage(profile.imageUrl)
+                        : FileImage(File(profile.imageUrl))) as ImageProvider,
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: const Icon(Icons.camera_alt,
+                        size: 22, color: Colors.black),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),

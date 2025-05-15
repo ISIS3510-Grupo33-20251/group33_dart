@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/profile_service.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -9,6 +9,14 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profile = context.watch<ProfileService>().profile;
+    ImageProvider? imageProvider;
+    if (profile.imageUrl.isNotEmpty) {
+      if (profile.imageUrl.startsWith('http')) {
+        imageProvider = NetworkImage(profile.imageUrl);
+      } else if (File(profile.imageUrl).existsSync()) {
+        imageProvider = FileImage(File(profile.imageUrl));
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
@@ -16,17 +24,12 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ClipOval(
-              child: CachedNetworkImage(
-                imageUrl: profile.imageUrl,
-                width: 120,
-                height: 120,
-                fit: BoxFit.cover,
-                placeholder: (context, url) =>
-                    const CircularProgressIndicator(),
-                errorWidget: (context, url, error) =>
-                    const Icon(Icons.person, size: 120),
-              ),
+            CircleAvatar(
+              radius: 60,
+              backgroundImage: imageProvider,
+              child: imageProvider == null
+                  ? const Icon(Icons.person, size: 80)
+                  : null,
             ),
             const SizedBox(height: 16),
             Text(

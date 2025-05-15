@@ -5,6 +5,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 class CacheService {
   final CacheManager _cache = DefaultCacheManager();
   static const String _lastScheduleUpdateKey = 'last_schedule_update';
+  static const String _profileImageKey = 'profile_image_path';
 
   Future<void> cacheFlashcard(
       String key, List<Map<String, dynamic>> data) async {
@@ -89,5 +90,25 @@ class CacheService {
 
   Future<void> removeLastScheduleUpdate() async {
     await _cache.removeFile(_lastScheduleUpdateKey);
+  }
+
+  Future<void> cacheProfileImage(String imagePath) async {
+    await _cache.putFile(
+      _profileImageKey,
+      Uint8List.fromList(imagePath.codeUnits),
+      fileExtension: 'txt',
+    );
+  }
+
+  Future<String?> loadCachedProfileImage() async {
+    final fileInfo = await _cache.getFileFromCache(_profileImageKey);
+    if (fileInfo == null) return null;
+    try {
+      final path = await fileInfo.file.readAsString();
+      return path;
+    } catch (e) {
+      print('Error loading cached profile image path: $e');
+      return null;
+    }
   }
 }
