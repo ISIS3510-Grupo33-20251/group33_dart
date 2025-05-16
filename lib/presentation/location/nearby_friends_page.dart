@@ -40,7 +40,14 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
   Future<void> _initialize() async {
     try {
       final hasConnection = await connectivityService.checkConnectivity();
-      
+      if (!hasConnection) {
+
+
+
+       error = 'No internet.';
+
+
+      }
 
       Position? position;
       try {
@@ -113,7 +120,6 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
             friend.latitude,
             friend.longitude,
           );
-           friendCache.put(friend.email, friend);
         }
        
         fetchedFriends.sort((a, b) => a.distance.compareTo(b.distance));
@@ -126,7 +132,6 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
         isLoading = false;
         error = '';
       });
-      await cache.cacheFriendLocations(friendCache.cacheMap);
     } catch (e) {
       final cachedLocation = await cache.loadCachedUserLocation();
       List<Map<String, dynamic>> cached = await localStorage.loadFriends();
@@ -183,17 +188,7 @@ class _NearbyFriendsPageState extends State<NearbyFriendsPage> {
   IconButton(
     icon: const Icon(Icons.refresh, color: Colors.black),
     onPressed: () async {
-      setState(() {
-        isLoading = true;
-      });
-
-      final position = await _getLocation();
-      if (position != null) {
-        await _updateUserLocation(position);
-      }
-
-      await _fetchFriends(position);
-    },
+     _initialize();}
   ),
   AddFriendPopup(userId: userId),
 ],
