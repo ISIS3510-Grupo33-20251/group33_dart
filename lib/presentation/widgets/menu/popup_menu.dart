@@ -18,6 +18,7 @@ class PopupMenuWidget extends StatelessWidget {
         _buildStyledItem('Friends'),
         _buildStyledItem('Share'),
         _buildStyledItem('Settings'),
+        _buildStyledItem('Calculator'),
         _buildStyledItem('Guide'),
         _buildStyledItem('Logout'),
       ],

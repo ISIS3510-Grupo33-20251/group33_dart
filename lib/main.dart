@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:group33_dart/core/network/actionQueueManager.dart';
+import 'package:group33_dart/presentation/calculator/calculator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'services/schedule_service.dart';
@@ -87,6 +88,7 @@ class MainApp extends StatelessWidget {
           '/schedule': (context) => const ScheduleScreen(),
           '/profile': (_) => const ProfileScreen(),
           '/edit_profile': (_) => const EditProfileScreen(),
+          '/calculator': (_) => const CalculatorWidget()
         },
       ),
     );
