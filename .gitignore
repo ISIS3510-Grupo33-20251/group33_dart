@@ -47,3 +47,5 @@ app.*.map.json
 
 # Android specific
 /android/app/.cxx
+
+devtools_options.yaml

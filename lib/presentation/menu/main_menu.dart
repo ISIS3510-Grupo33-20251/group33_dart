@@ -43,6 +43,8 @@ class MainMenuPage extends StatelessWidget {
         context,
         MaterialPageRoute(builder: (context) => const NearbyFriendsPage()),
       );
+    } else if (value == 'calculator') {
+      Navigator.pushNamed(context, '/calculator');
     } else if (value == 'logout') {
       _handleLogout(context);
     } else {
