@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../data/sources/local/cache_service.dart';
 import '../../services/profile_service.dart';
+import '../kanban/kanban_view.dart';
 
 class MainMenuPage extends StatelessWidget {
   const MainMenuPage({super.key});
@@ -45,6 +46,11 @@ class MainMenuPage extends StatelessWidget {
       );
     } else if (value == 'calculator') {
       Navigator.pushNamed(context, '/calculator');
+    } else if (value == 'kanban') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const KanbanView()),
+      );
     } else if (value == 'logout') {
       _handleLogout(context);
     } else {
