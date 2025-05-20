@@ -17,6 +17,10 @@ class _KanbanViewState extends State<KanbanView> {
   final _subjectController = TextEditingController();
   DateTime? _selectedDueDate;
   int _selectedPriority = 2;
+  int _currentColumnIndex = 0;
+
+  final List<String> _columns = ['To Do', 'In Progress', 'Done'];
+  final List<String> _statuses = ['todo', 'in_progress', 'done'];
 
   @override
   void dispose() {
@@ -24,6 +28,19 @@ class _KanbanViewState extends State<KanbanView> {
     _descriptionController.dispose();
     _subjectController.dispose();
     super.dispose();
+  }
+
+  void _navigateColumn(int direction) {
+    setState(() {
+      _currentColumnIndex =
+          (_currentColumnIndex + direction).clamp(0, _columns.length - 1);
+    });
+  }
+
+  void _moveTask(KanbanTask task, int direction) {
+    final currentIndex = _statuses.indexOf(task.status);
+    final newIndex = (currentIndex + direction).clamp(0, _statuses.length - 1);
+    _updateTaskStatus(task, _statuses[newIndex]);
   }
 
   void _addTask() {
@@ -141,12 +158,41 @@ class _KanbanViewState extends State<KanbanView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kanban Board'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: Row(
+      body: Column(
         children: [
-          _buildColumn('To Do', 'todo'),
-          _buildColumn('In Progress', 'in_progress'),
-          _buildColumn('Done', 'done'),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios),
+                  onPressed: _currentColumnIndex > 0
+                      ? () => _navigateColumn(-1)
+                      : null,
+                ),
+                Text(
+                  _columns[_currentColumnIndex],
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_forward_ios),
+                  onPressed: _currentColumnIndex < _columns.length - 1
+                      ? () => _navigateColumn(1)
+                      : null,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _buildColumn(
+                _columns[_currentColumnIndex], _statuses[_currentColumnIndex]),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -159,64 +205,43 @@ class _KanbanViewState extends State<KanbanView> {
   Widget _buildColumn(String title, String status) {
     final columnTasks = tasks.where((task) => task.status == status).toList();
 
-    return Expanded(
-      child: Card(
-        margin: const EdgeInsets.all(8),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge,
+    return Card(
+      margin: const EdgeInsets.all(8),
+      child: ListView.builder(
+        itemCount: columnTasks.length,
+        itemBuilder: (context, index) {
+          final task = columnTasks[index];
+          return Card(
+            margin: const EdgeInsets.all(4),
+            child: ListTile(
+              title: Text(task.title),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (task.description.isNotEmpty) Text(task.description),
+                  if (task.subject != null) Text('Subject: ${task.subject}'),
+                  if (task.dueDate != null)
+                    Text('Due: ${task.dueDate.toString().split(' ')[0]}'),
+                ],
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed:
+                        status != 'todo' ? () => _moveTask(task, -1) : null,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward),
+                    onPressed:
+                        status != 'done' ? () => _moveTask(task, 1) : null,
+                  ),
+                ],
               ),
             ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: columnTasks.length,
-                itemBuilder: (context, index) {
-                  final task = columnTasks[index];
-                  return Card(
-                    margin: const EdgeInsets.all(4),
-                    child: ListTile(
-                      title: Text(task.title),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (task.description.isNotEmpty)
-                            Text(task.description),
-                          if (task.subject != null)
-                            Text('Subject: ${task.subject}'),
-                          if (task.dueDate != null)
-                            Text(
-                                'Due: ${task.dueDate.toString().split(' ')[0]}'),
-                        ],
-                      ),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (newStatus) =>
-                            _updateTaskStatus(task, newStatus),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'todo',
-                            child: Text('Move to To Do'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'in_progress',
-                            child: Text('Move to In Progress'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'done',
-                            child: Text('Move to Done'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
