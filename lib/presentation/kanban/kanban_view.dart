@@ -18,6 +18,7 @@ class _KanbanViewState extends State<KanbanView> {
   final _descriptionController = TextEditingController();
   final _subjectController = TextEditingController();
   DateTime? _selectedDueDate;
+  TimeOfDay? _selectedDueTime;
   int _selectedPriority = 2;
   int _currentColumnIndex = 0;
   bool _isHorizontalView = false;
@@ -60,6 +61,22 @@ class _KanbanViewState extends State<KanbanView> {
     final currentIndex = _statuses.indexOf(task.status);
     final newIndex = (currentIndex + direction).clamp(0, _statuses.length - 1);
     _updateTaskStatus(task, _statuses[newIndex]);
+  }
+
+  Future<void> _showValidationError(String message) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Validation Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _addTask() async {
@@ -109,8 +126,10 @@ class _KanbanViewState extends State<KanbanView> {
                 const SizedBox(height: 16),
                 ListTile(
                   title: Text(_selectedDueDate == null
-                      ? 'Select Due Date'
-                      : 'Due: ${_selectedDueDate!.toString().split(' ')[0]}'),
+                      ? 'Select Due Date & Time'
+                      : 'Due: '
+                          '${_selectedDueDate!.toString().split(' ')[0]} '
+                          '${_selectedDueTime != null ? _selectedDueTime!.format(context) : ''}'),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final date = await showDatePicker(
@@ -120,8 +139,13 @@ class _KanbanViewState extends State<KanbanView> {
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
                     if (date != null) {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
                       setState(() {
                         _selectedDueDate = date;
+                        _selectedDueTime = time;
                       });
                     }
                   },
@@ -132,25 +156,31 @@ class _KanbanViewState extends State<KanbanView> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
               try {
                 if (!(_formKey.currentState?.validate() ?? false)) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Please fill all required fields.')),
-                  );
+                  await _showValidationError(
+                      'Please fill all required fields.');
                   return;
                 }
-                if (_selectedDueDate == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please select a due date.')),
-                  );
+                if (_selectedDueDate == null || _selectedDueTime == null) {
+                  await _showValidationError(
+                      'Please select a due date and time.');
                   return;
                 }
+                final dueDateTime = DateTime(
+                  _selectedDueDate!.year,
+                  _selectedDueDate!.month,
+                  _selectedDueDate!.day,
+                  _selectedDueTime!.hour,
+                  _selectedDueTime!.minute,
+                );
                 String backendPriority = _selectedPriority == 3
                     ? 'high'
                     : _selectedPriority == 2
@@ -160,17 +190,23 @@ class _KanbanViewState extends State<KanbanView> {
                 final backendTask = await _apiService.createKanbanTaskOnBackend(
                   title: _titleController.text,
                   description: _descriptionController.text,
-                  dueDate: _selectedDueDate!,
+                  dueDate: dueDateTime,
                   priority: backendPriority,
                   status: backendStatus,
                   userId: userId,
                 );
+                // Map backend status to local status
+                String localStatus = backendTask['status'] == 'pending'
+                    ? 'todo'
+                    : backendTask['status'] == 'in_progress'
+                        ? 'in_progress'
+                        : 'done';
                 setState(() {
                   tasks.add(KanbanTask(
                     id: backendTask['_id'],
                     title: backendTask['title'],
                     description: backendTask['description'],
-                    status: backendTask['status'],
+                    status: localStatus,
                     createdAt: DateTime.now(),
                     dueDate: DateTime.parse(backendTask['due_date']),
                     subject: _subjectController.text,
@@ -181,6 +217,7 @@ class _KanbanViewState extends State<KanbanView> {
                 _descriptionController.clear();
                 _subjectController.clear();
                 _selectedDueDate = null;
+                _selectedDueTime = null;
                 _selectedPriority = 2;
                 Navigator.pop(context);
               } catch (e) {
@@ -255,6 +292,8 @@ class _KanbanViewState extends State<KanbanView> {
     _descriptionController.text = task.description;
     _subjectController.text = task.subject ?? '';
     _selectedDueDate = task.dueDate;
+    _selectedDueTime =
+        TimeOfDay(hour: task.dueDate!.hour, minute: task.dueDate!.minute);
     _selectedPriority = task.priority;
     showDialog(
       context: context,
@@ -299,8 +338,10 @@ class _KanbanViewState extends State<KanbanView> {
                 const SizedBox(height: 16),
                 ListTile(
                   title: Text(_selectedDueDate == null
-                      ? 'Select Due Date'
-                      : 'Due: ${_selectedDueDate!.toString().split(' ')[0]}'),
+                      ? 'Select Due Date & Time'
+                      : 'Due: '
+                          '${_selectedDueDate!.toString().split(' ')[0]} '
+                          '${_selectedDueTime != null ? _selectedDueTime!.format(context) : ''}'),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final date = await showDatePicker(
@@ -310,8 +351,13 @@ class _KanbanViewState extends State<KanbanView> {
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
                     if (date != null) {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: _selectedDueTime ?? TimeOfDay.now(),
+                      );
                       setState(() {
                         _selectedDueDate = date;
+                        _selectedDueTime = time;
                       });
                     }
                   },
@@ -327,6 +373,7 @@ class _KanbanViewState extends State<KanbanView> {
               _descriptionController.clear();
               _subjectController.clear();
               _selectedDueDate = null;
+              _selectedDueTime = null;
               _selectedPriority = 2;
               Navigator.pop(context);
             },
@@ -380,6 +427,7 @@ class _KanbanViewState extends State<KanbanView> {
                 _descriptionController.clear();
                 _subjectController.clear();
                 _selectedDueDate = null;
+                _selectedDueTime = null;
                 _selectedPriority = 2;
                 Navigator.pop(context);
               }
@@ -402,6 +450,53 @@ class _KanbanViewState extends State<KanbanView> {
         SnackBar(content: Text('Error deleting task: $e')),
       );
     }
+  }
+
+  void _showTaskDetails(KanbanTask task) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(task.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (task.description.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text('Description: ${task.description}'),
+              ),
+            if (task.subject != null && task.subject!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text('Subject: ${task.subject}'),
+              ),
+            if (task.dueDate != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                    'Due: ${task.dueDate!.toString().replaceFirst("T", " ").substring(0, 16)}'),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                  'Priority: ${task.priority == 3 ? 'High' : task.priority == 2 ? 'Medium' : 'Low'}'),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                  'Status: ${task.status == 'todo' ? 'To Do' : task.status == 'in_progress' ? 'In Progress' : 'Done'}'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -506,16 +601,7 @@ class _KanbanViewState extends State<KanbanView> {
                   color: _getPriorityColor(task.priority),
                   child: ListTile(
                     title: Text(task.title),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (task.description.isNotEmpty) Text(task.description),
-                        if (task.subject != null)
-                          Text('Subject: ${task.subject}'),
-                        if (task.dueDate != null)
-                          Text('Due: ${task.dueDate.toString().split(' ')[0]}'),
-                      ],
-                    ),
+                    onTap: () => _showTaskDetails(task),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
