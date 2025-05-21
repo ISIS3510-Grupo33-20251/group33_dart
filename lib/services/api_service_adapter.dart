@@ -538,6 +538,95 @@ class ApiServiceAdapter {
       throw Exception('Failed to update user name: \\${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> createKanbanTaskOnBackend({
+    required String title,
+    required String description,
+    required DateTime dueDate,
+    required String priority,
+    required String status,
+    required String userId,
+    String? assigneeId,
+  }) async {
+    final url = Uri.parse('$backendUrl/tasks/');
+    final response = await http.post(
+      url,
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'title': title,
+        'description': description,
+        'due_date': dueDate.toIso8601String(),
+        'priority': priority,
+        'status': status,
+        'user_id': userId,
+        'assignee_id': assigneeId ?? userId,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to create task: ${response.body}');
+    }
+  }
+
+  Future<void> deleteKanbanTaskOnBackend(String taskId) async {
+    final url = Uri.parse('$backendUrl/tasks/$taskId');
+    final response = await http.delete(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to delete task: ${response.body}');
+    }
+  }
+
+  Future<void> updateKanbanTaskOnBackend({
+    required String id,
+    required String title,
+    required String description,
+    required DateTime dueDate,
+    required String priority,
+    required String status,
+    required String userId,
+    String? assigneeId,
+  }) async {
+    final url = Uri.parse('$backendUrl/tasks/$id');
+    final response = await http.put(
+      url,
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'title': title,
+        'description': description,
+        'due_date': dueDate.toIso8601String(),
+        'priority': priority,
+        'status': status,
+        'user_id': userId,
+        'assignee_id': assigneeId ?? userId,
+      }),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to update task: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> getKanbanTaskById(String id) async {
+    final url = Uri.parse('$backendUrl/tasks/$id');
+    final response = await http.get(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to get task: ${response.body}');
+    }
+  }
 }
 
 Future<bool> hasInternetConnection() async {
