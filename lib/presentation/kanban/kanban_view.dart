@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/kanban_task.dart';
 import '../../services/api_service_adapter.dart';
 import '../../globals.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class KanbanView extends StatefulWidget {
   const KanbanView({Key? key}) : super(key: key);
@@ -23,6 +24,10 @@ class _KanbanViewState extends State<KanbanView> {
   int _currentColumnIndex = 0;
   bool _isHorizontalView = false;
   String? _kanbanId;
+  bool _isOffline = false;
+  late final Connectivity _connectivity = Connectivity();
+  late final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   final List<String> _columns = ['To Do', 'In Progress', 'Done'];
   final List<String> _statuses = ['todo', 'in_progress', 'done'];
@@ -47,6 +52,46 @@ class _KanbanViewState extends State<KanbanView> {
   void initState() {
     super.initState();
     _fetchKanbanId();
+    _initConnectivityListener();
+  }
+
+  void _initConnectivityListener() {
+    _connectivity.onConnectivityChanged.listen((ConnectivityResult result) {
+      final offline = result == ConnectivityResult.none;
+      if (offline != _isOffline) {
+        setState(() {
+          _isOffline = offline;
+        });
+        if (offline) {
+          _showOfflineBanner();
+        } else {
+          _hideOfflineBanner();
+        }
+      }
+    });
+  }
+
+  void _showOfflineBanner() {
+    _scaffoldMessengerKey.currentState?.clearMaterialBanners();
+    _scaffoldMessengerKey.currentState?.showMaterialBanner(
+      MaterialBanner(
+        content: const Text(
+          'Estás sin conexión. Los cambios se sincronizarán cuando haya internet de nuevo.',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.deepOrange,
+        actions: [
+          TextButton(
+            onPressed: () => _hideOfflineBanner(),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _hideOfflineBanner() {
+    _scaffoldMessengerKey.currentState?.clearMaterialBanners();
   }
 
   Future<void> _fetchKanbanId() async {
@@ -553,73 +598,76 @@ class _KanbanViewState extends State<KanbanView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kanban Board'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon:
-                Icon(_isHorizontalView ? Icons.view_agenda : Icons.view_column),
-            onPressed: () {
-              setState(() {
-                _isHorizontalView = !_isHorizontalView;
-              });
-            },
-            tooltip: _isHorizontalView
-                ? 'Switch to Vertical View'
-                : 'Switch to Horizontal View',
+    return ScaffoldMessenger(
+      key: _scaffoldMessengerKey,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Kanban Board'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
           ),
-        ],
-      ),
-      body: _isHorizontalView
-          ? Row(
-              children: [
-                for (int i = 0; i < _columns.length; i++)
-                  Expanded(
-                    child: _buildColumn(_columns[i], _statuses[i],
-                        showHeader: true),
-                  ),
-              ],
-            )
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios),
-                        onPressed: _currentColumnIndex > 0
-                            ? () => _navigateColumn(-1)
-                            : null,
-                      ),
-                      Text(
-                        _columns[_currentColumnIndex],
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed: _currentColumnIndex < _columns.length - 1
-                            ? () => _navigateColumn(1)
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: _buildColumn(_columns[_currentColumnIndex],
-                      _statuses[_currentColumnIndex]),
-                ),
-              ],
+          actions: [
+            IconButton(
+              icon: Icon(
+                  _isHorizontalView ? Icons.view_agenda : Icons.view_column),
+              onPressed: () {
+                setState(() {
+                  _isHorizontalView = !_isHorizontalView;
+                });
+              },
+              tooltip: _isHorizontalView
+                  ? 'Switch to Vertical View'
+                  : 'Switch to Horizontal View',
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addTask,
-        child: const Icon(Icons.add),
+          ],
+        ),
+        body: _isHorizontalView
+            ? Row(
+                children: [
+                  for (int i = 0; i < _columns.length; i++)
+                    Expanded(
+                      child: _buildColumn(_columns[i], _statuses[i],
+                          showHeader: true),
+                    ),
+                ],
+              )
+            : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios),
+                          onPressed: _currentColumnIndex > 0
+                              ? () => _navigateColumn(-1)
+                              : null,
+                        ),
+                        Text(
+                          _columns[_currentColumnIndex],
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_forward_ios),
+                          onPressed: _currentColumnIndex < _columns.length - 1
+                              ? () => _navigateColumn(1)
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildColumn(_columns[_currentColumnIndex],
+                        _statuses[_currentColumnIndex]),
+                  ),
+                ],
+              ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _addTask,
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
