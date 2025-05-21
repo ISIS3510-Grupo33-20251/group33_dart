@@ -4,6 +4,7 @@ import '../../models/kanban_task.dart';
 import '../../services/api_service_adapter.dart';
 import '../../globals.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../data/sources/local/kanban_local_service.dart';
 
 class KanbanView extends StatefulWidget {
   const KanbanView({Key? key}) : super(key: key);
@@ -28,12 +29,14 @@ class _KanbanViewState extends State<KanbanView> {
   late final Connectivity _connectivity = Connectivity();
   late final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
+  bool _isLoading = false;
 
   final List<String> _columns = ['To Do', 'In Progress', 'Done'];
   final List<String> _statuses = ['todo', 'in_progress', 'done'];
 
   late final ApiServiceAdapter _apiService =
       ApiServiceAdapter(backendUrl: backendUrl);
+  final KanbanLocalService _localService = KanbanLocalService();
 
   Color _getPriorityColor(int priority) {
     switch (priority) {
@@ -56,7 +59,8 @@ class _KanbanViewState extends State<KanbanView> {
   }
 
   void _initConnectivityListener() {
-    _connectivity.onConnectivityChanged.listen((ConnectivityResult result) {
+    _connectivity.onConnectivityChanged
+        .listen((ConnectivityResult result) async {
       final offline = result == ConnectivityResult.none;
       if (offline != _isOffline) {
         setState(() {
@@ -66,6 +70,8 @@ class _KanbanViewState extends State<KanbanView> {
           _showOfflineBanner();
         } else {
           _hideOfflineBanner();
+          // On reconnect, try to sync the queue
+          await _processSyncQueue();
         }
       }
     });
@@ -76,7 +82,7 @@ class _KanbanViewState extends State<KanbanView> {
     _scaffoldMessengerKey.currentState?.showMaterialBanner(
       MaterialBanner(
         content: const Text(
-          'Estás sin conexión. Los cambios se sincronizarán cuando haya internet de nuevo.',
+          'You are offline. Changes will sync when you are back online.',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.deepOrange,
@@ -102,22 +108,30 @@ class _KanbanViewState extends State<KanbanView> {
       });
       await _fetchKanbanTasks(id);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching Kanban ID: $e')),
-      );
+      final isOfflineNow =
+          await Connectivity().checkConnectivity() == ConnectivityResult.none;
+      if (!isOfflineNow) {
+        _scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(content: Text('Error fetching Kanban ID: $e')),
+        );
+      }
     }
   }
 
   Future<void> _fetchKanbanTasks(String kanbanId) async {
     try {
+      if (_isOffline) {
+        // Load from local storage
+        final localTasks = await _localService.loadTasks();
+        setState(() {
+          tasks = localTasks;
+        });
+        return;
+      }
       final backendTasks = await _apiService.getTasksForKanban(kanbanId);
       setState(() {
         tasks = backendTasks.map((backendTask) {
-          String localStatus = backendTask['status'] == 'pending'
-              ? 'todo'
-              : backendTask['status'] == 'in_progress'
-                  ? 'in_progress'
-                  : 'done';
+          String localStatus = _toLocalStatus(backendTask['status']);
           int localPriority = backendTask['priority'] == 'high'
               ? 3
               : backendTask['priority'] == 'medium'
@@ -138,9 +152,13 @@ class _KanbanViewState extends State<KanbanView> {
         }).toList();
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching Kanban tasks: $e')),
-      );
+      final isOfflineNow =
+          await Connectivity().checkConnectivity() == ConnectivityResult.none;
+      if (!isOfflineNow) {
+        _scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(content: Text('Error fetching Kanban tasks: $e')),
+        );
+      }
     }
   }
 
@@ -182,152 +200,213 @@ class _KanbanViewState extends State<KanbanView> {
   }
 
   Future<void> _addTask() async {
+    if (_kanbanId == null) {
+      await _showValidationError('No se ha cargado el tablero Kanban.');
+      return;
+    }
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add New Task'),
-        content: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(labelText: 'Title'),
-                  validator: (value) =>
-                      value?.isEmpty ?? true ? 'Please enter a title' : null,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Add New Task'),
+          content: _isLoading
+              ? const SizedBox(
+                  height: 100,
+                  child: Center(child: CircularProgressIndicator()))
+              : Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: _titleController,
+                          decoration: const InputDecoration(labelText: 'Title'),
+                          validator: (value) => value?.isEmpty ?? true
+                              ? 'Please enter a title'
+                              : null,
+                        ),
+                        TextFormField(
+                          controller: _descriptionController,
+                          decoration:
+                              const InputDecoration(labelText: 'Description'),
+                          maxLines: 3,
+                          validator: (value) => value?.isEmpty ?? true
+                              ? 'Please enter a description'
+                              : null,
+                        ),
+                        TextFormField(
+                          controller: _subjectController,
+                          decoration:
+                              const InputDecoration(labelText: 'Subject'),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          value: _selectedPriority,
+                          decoration:
+                              const InputDecoration(labelText: 'Priority'),
+                          items: const [
+                            DropdownMenuItem(value: 1, child: Text('Low')),
+                            DropdownMenuItem(value: 2, child: Text('Medium')),
+                            DropdownMenuItem(value: 3, child: Text('High')),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedPriority = value ?? 2;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          title: Text(_selectedDueDate == null
+                              ? 'Select Due Date & Time'
+                              : 'Due: '
+                                  '${_selectedDueDate!.toString().split(' ')[0]} '
+                                  '${_selectedDueTime != null ? _selectedDueTime!.format(context) : ''}'),
+                          trailing: const Icon(Icons.calendar_today),
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate:
+                                  DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (date != null) {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.now(),
+                              );
+                              setState(() {
+                                _selectedDueDate = date;
+                                _selectedDueTime = time;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  maxLines: 3,
-                  validator: (value) => value?.isEmpty ?? true
-                      ? 'Please enter a description'
-                      : null,
-                ),
-                TextFormField(
-                  controller: _subjectController,
-                  decoration: const InputDecoration(labelText: 'Subject'),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<int>(
-                  value: _selectedPriority,
-                  decoration: const InputDecoration(labelText: 'Priority'),
-                  items: const [
-                    DropdownMenuItem(value: 1, child: Text('Low')),
-                    DropdownMenuItem(value: 2, child: Text('Medium')),
-                    DropdownMenuItem(value: 3, child: Text('High')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedPriority = value ?? 2;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  title: Text(_selectedDueDate == null
-                      ? 'Select Due Date & Time'
-                      : 'Due: '
-                          '${_selectedDueDate!.toString().split(' ')[0]} '
-                          '${_selectedDueTime != null ? _selectedDueTime!.format(context) : ''}'),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (date != null) {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-                      setState(() {
-                        _selectedDueDate = date;
-                        _selectedDueTime = time;
-                      });
-                    }
-                  },
-                ),
-              ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-          ),
+            TextButton(
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      try {
+                        if (!(_formKey.currentState?.validate() ?? false)) {
+                          await _showValidationError(
+                              'Please fill all required fields.');
+                          return;
+                        }
+                        if (_selectedDueDate == null ||
+                            _selectedDueTime == null) {
+                          await _showValidationError(
+                              'Please select a due date and time.');
+                          return;
+                        }
+                        setStateDialog(() => _isLoading = true);
+                        final dueDateTime = DateTime(
+                          _selectedDueDate!.year,
+                          _selectedDueDate!.month,
+                          _selectedDueDate!.day,
+                          _selectedDueTime!.hour,
+                          _selectedDueTime!.minute,
+                        );
+                        String backendPriority = _selectedPriority == 3
+                            ? 'high'
+                            : _selectedPriority == 2
+                                ? 'medium'
+                                : 'low';
+                        String backendStatus = 'pending';
+                        if (_isOffline) {
+                          // OFFLINE: Save locally and add to queue
+                          final localId =
+                              DateTime.now().millisecondsSinceEpoch.toString();
+                          final localTask = KanbanTask(
+                            id: localId,
+                            title: _titleController.text,
+                            description: _descriptionController.text,
+                            status: 'todo',
+                            createdAt: DateTime.now(),
+                            dueDate: dueDateTime,
+                            subject: _subjectController.text,
+                            priority: _selectedPriority,
+                          );
+                          final tasksLocal = await _localService.loadTasks();
+                          tasksLocal.add(localTask);
+                          await _localService.saveTasks(tasksLocal);
+                          // Add to action queue
+                          final queue = await _localService.loadActionQueue();
+                          queue.add({
+                            'action': 'add',
+                            'task': localTask.toJson(),
+                          });
+                          await _localService.saveActionQueue(queue);
+                          setStateDialog(() => _isLoading = false);
+                          Navigator.pop(context);
+                          _scaffoldMessengerKey.currentState?.showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Task saved locally. It will sync when you are back online.')),
+                          );
+                          _titleController.clear();
+                          _descriptionController.clear();
+                          _subjectController.clear();
+                          _selectedDueDate = null;
+                          _selectedDueTime = null;
+                          _selectedPriority = 2;
+                          setState(() {
+                            tasks = tasksLocal;
+                          });
+                          return;
+                        }
+                        // ONLINE: Normal flow
+                        final backendTask =
+                            await _apiService.createKanbanTaskOnBackend(
+                          title: _titleController.text,
+                          description: _descriptionController.text,
+                          dueDate: dueDateTime,
+                          priority: backendPriority,
+                          status: backendStatus,
+                          userId: userId,
+                        );
+                        await _apiService.addTaskToKanban(
+                            _kanbanId!, backendTask['_id']);
+                        await _fetchKanbanTasks(_kanbanId!);
+                        setStateDialog(() => _isLoading = false);
+                        Navigator.pop(context);
+                        _scaffoldMessengerKey.currentState?.showSnackBar(
+                          const SnackBar(
+                              content: Text('Task created successfully.')),
+                        );
+                        _titleController.clear();
+                        _descriptionController.clear();
+                        _subjectController.clear();
+                        _selectedDueDate = null;
+                        _selectedDueTime = null;
+                        _selectedPriority = 2;
+                      } catch (e) {
+                        setStateDialog(() => _isLoading = false);
+                        String errorMsg = 'Error creating task: ';
+                        if (e.toString().contains('Failed host lookup')) {
+                          errorMsg += 'No internet connection.';
+                        } else {
+                          errorMsg += e.toString();
+                        }
+                        _scaffoldMessengerKey.currentState?.showSnackBar(
+                          SnackBar(content: Text(errorMsg)),
+                        );
+                      }
+                    },
+              child: const Text('Add'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                if (!(_formKey.currentState?.validate() ?? false)) {
-                  await _showValidationError(
-                      'Please fill all required fields.');
-                  return;
-                }
-                if (_selectedDueDate == null || _selectedDueTime == null) {
-                  await _showValidationError(
-                      'Please select a due date and time.');
-                  return;
-                }
-                if (_kanbanId == null) {
-                  await _showValidationError(
-                      'Kanban board not loaded. Try again.');
-                  return;
-                }
-                final dueDateTime = DateTime(
-                  _selectedDueDate!.year,
-                  _selectedDueDate!.month,
-                  _selectedDueDate!.day,
-                  _selectedDueTime!.hour,
-                  _selectedDueTime!.minute,
-                );
-                String backendPriority = _selectedPriority == 3
-                    ? 'high'
-                    : _selectedPriority == 2
-                        ? 'medium'
-                        : 'low';
-                String backendStatus = 'pending';
-                final backendTask = await _apiService.createKanbanTaskOnBackend(
-                  title: _titleController.text,
-                  description: _descriptionController.text,
-                  dueDate: dueDateTime,
-                  priority: backendPriority,
-                  status: backendStatus,
-                  userId: userId,
-                );
-                await _apiService.addTaskToKanban(
-                    _kanbanId!, backendTask['_id']);
-                // Refresh list after add
-                await _fetchKanbanTasks(_kanbanId!);
-                _titleController.clear();
-                _descriptionController.clear();
-                _subjectController.clear();
-                _selectedDueDate = null;
-                _selectedDueTime = null;
-                _selectedPriority = 2;
-                Navigator.pop(context);
-              } catch (e) {
-                String errorMsg = 'Error creating task: ';
-                if (e.toString().contains('Failed host lookup')) {
-                  errorMsg += 'No internet connection.';
-                } else {
-                  errorMsg += e.toString();
-                }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(errorMsg)),
-                );
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
       ),
     );
   }
@@ -382,7 +461,7 @@ class _KanbanViewState extends State<KanbanView> {
         await _fetchKanbanTasks(_kanbanId!);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(content: Text('Error updating status: $e')),
       );
     }
@@ -512,7 +591,7 @@ class _KanbanViewState extends State<KanbanView> {
                     await _fetchKanbanTasks(_kanbanId!);
                   }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  _scaffoldMessengerKey.currentState?.showSnackBar(
                     SnackBar(content: Text('Error updating task: $e')),
                   );
                 }
@@ -543,7 +622,7 @@ class _KanbanViewState extends State<KanbanView> {
         await _fetchKanbanTasks(_kanbanId!);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      _scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(content: Text('Error deleting task: $e')),
       );
     }
@@ -596,6 +675,51 @@ class _KanbanViewState extends State<KanbanView> {
     );
   }
 
+  Future<void> _processSyncQueue() async {
+    final queue = await _localService.loadActionQueue();
+    if (queue.isEmpty || _kanbanId == null) return;
+    bool anySynced = false;
+    for (final action in List<Map<String, dynamic>>.from(queue)) {
+      try {
+        if (action['action'] == 'add') {
+          final taskJson = action['task'] as Map<String, dynamic>;
+          // Create in backend
+          final backendTask = await _apiService.createKanbanTaskOnBackend(
+            title: taskJson['title'],
+            description: taskJson['description'],
+            dueDate: DateTime.parse(taskJson['dueDate']),
+            priority: taskJson['priority'] == 3
+                ? 'high'
+                : taskJson['priority'] == 2
+                    ? 'medium'
+                    : 'low',
+            status: 'pending',
+            userId: userId,
+          );
+          await _apiService.addTaskToKanban(_kanbanId!, backendTask['_id']);
+          anySynced = true;
+        }
+        // TODO: handle edit, delete, move actions if needed
+        queue.remove(action);
+        await _localService.saveActionQueue(queue);
+      } catch (_) {
+        // If any action fails, keep it in the queue for next time
+        continue;
+      }
+    }
+    if (anySynced) {
+      await _fetchKanbanTasks(_kanbanId!);
+      _scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(content: Text('Changes synced with the server.')),
+      );
+    }
+    // Clean up local-only tasks if needed
+    final tasksLocal = await _localService.loadTasks();
+    if (tasksLocal.isNotEmpty) {
+      await _localService.saveTasks([]);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ScaffoldMessenger(
@@ -622,52 +746,63 @@ class _KanbanViewState extends State<KanbanView> {
             ),
           ],
         ),
-        body: _isHorizontalView
-            ? Row(
-                children: [
-                  for (int i = 0; i < _columns.length; i++)
-                    Expanded(
-                      child: _buildColumn(_columns[i], _statuses[i],
-                          showHeader: true),
-                    ),
-                ],
+        body: (_kanbanId == null && !_isOffline)
+            ? const Center(
+                child: Text(
+                  'Could not load Kanban board. Check your connection or try again later.',
+                  style: TextStyle(fontSize: 18, color: Colors.redAccent),
+                  textAlign: TextAlign.center,
+                ),
               )
-            : Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios),
-                          onPressed: _currentColumnIndex > 0
-                              ? () => _navigateColumn(-1)
-                              : null,
+            : (_isHorizontalView
+                ? Row(
+                    children: [
+                      for (int i = 0; i < _columns.length; i++)
+                        Expanded(
+                          child: _buildColumn(_columns[i], _statuses[i],
+                              showHeader: true),
                         ),
-                        Text(
-                          _columns[_currentColumnIndex],
-                          style: Theme.of(context).textTheme.headlineSmall,
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_ios),
+                              onPressed: _currentColumnIndex > 0
+                                  ? () => _navigateColumn(-1)
+                                  : null,
+                            ),
+                            Text(
+                              _columns[_currentColumnIndex],
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_forward_ios),
+                              onPressed:
+                                  _currentColumnIndex < _columns.length - 1
+                                      ? () => _navigateColumn(1)
+                                      : null,
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward_ios),
-                          onPressed: _currentColumnIndex < _columns.length - 1
-                              ? () => _navigateColumn(1)
-                              : null,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildColumn(_columns[_currentColumnIndex],
-                        _statuses[_currentColumnIndex]),
-                  ),
-                ],
+                      ),
+                      Expanded(
+                        child: _buildColumn(_columns[_currentColumnIndex],
+                            _statuses[_currentColumnIndex]),
+                      ),
+                    ],
+                  )),
+        floatingActionButton: _kanbanId == null
+            ? null
+            : FloatingActionButton(
+                onPressed: _kanbanId == null ? null : _addTask,
+                child: const Icon(Icons.add),
               ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _addTask,
-          child: const Icon(Icons.add),
-        ),
       ),
     );
   }
