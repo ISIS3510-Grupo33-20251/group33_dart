@@ -538,6 +538,157 @@ class ApiServiceAdapter {
       throw Exception('Failed to update user name: \\${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> createKanbanTaskOnBackend({
+    required String title,
+    required String description,
+    required DateTime dueDate,
+    required String priority,
+    required String status,
+    required String userId,
+    String? assigneeId,
+  }) async {
+    final url = Uri.parse('$backendUrl/tasks/');
+    final response = await http.post(
+      url,
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'title': title,
+        'description': description,
+        'due_date': dueDate.toIso8601String(),
+        'priority': priority,
+        'status': status,
+        'user_id': userId,
+        'assignee_id': assigneeId ?? userId,
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to create task: ${response.body}');
+    }
+  }
+
+  Future<void> deleteKanbanTaskOnBackend(String taskId) async {
+    final url = Uri.parse('$backendUrl/tasks/$taskId');
+    final response = await http.delete(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to delete task: ${response.body}');
+    }
+  }
+
+  Future<void> updateKanbanTaskOnBackend({
+    required String id,
+    required String title,
+    required String description,
+    required DateTime dueDate,
+    required String priority,
+    required String status,
+    required String userId,
+    String? assigneeId,
+  }) async {
+    final url = Uri.parse('$backendUrl/tasks/$id');
+    final response = await http.put(
+      url,
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'title': title,
+        'description': description,
+        'due_date': dueDate.toIso8601String(),
+        'priority': priority,
+        'status': status,
+        'user_id': userId,
+        'assignee_id': assigneeId ?? userId,
+      }),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to update task: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> getKanbanTaskById(String id) async {
+    final url = Uri.parse('$backendUrl/tasks/$id');
+    final response = await http.get(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to get task: ${response.body}');
+    }
+  }
+
+  Future<String> getKanbanIdByUser(String userId) async {
+    final url = Uri.parse('$backendUrl/users/$userId/kanban');
+    final response = await http.get(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['kanban_id'];
+    } else {
+      throw Exception('Failed to get kanban id: ${response.body}');
+    }
+  }
+
+  Future<void> addTaskToKanban(String kanbanId, String taskId) async {
+    final url = Uri.parse('$backendUrl/kanban/$kanbanId/tasks/$taskId');
+    final response = await http.post(
+      url,
+      headers: {'accept': 'application/json'},
+      body: '',
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to add task to kanban: ${response.body}');
+    }
+  }
+
+  Future<void> removeTaskFromKanban(String kanbanId, String taskId) async {
+    final url = Uri.parse('$backendUrl/kanban/$kanbanId/tasks/$taskId');
+    final response = await http.delete(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to remove task from kanban: ${response.body}');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTasksForKanban(String kanbanId) async {
+    final url = Uri.parse('$backendUrl/kanban/$kanbanId');
+    final response = await http.get(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List<dynamic> allTaskIds = data['all_tasks'] ?? [];
+      List<Map<String, dynamic>> tasks = [];
+      for (var taskId in allTaskIds) {
+        try {
+          final task = await getKanbanTaskById(taskId);
+          tasks.add(task);
+        } catch (e) {
+          // If a task is not found, skip it
+          continue;
+        }
+      }
+      return tasks;
+    } else {
+      throw Exception('Failed to get kanban tasks: ${response.body}');
+    }
+  }
 }
 
 Future<bool> hasInternetConnection() async {

@@ -1,41 +1,67 @@
 import 'package:flutter/material.dart';
 
 class PopupMenuWidget extends StatelessWidget {
-  final void Function(String value) onSelected;
+  final Function(String) onSelected;
 
   const PopupMenuWidget({Key? key, required this.onSelected}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.menu, color: Colors.black),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white,
-      elevation: 8,
       onSelected: onSelected,
       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-        _buildStyledItem('Profile'),
-        _buildStyledItem('Friends'),
-        _buildStyledItem('Share'),
-        _buildStyledItem('Settings'),
-        _buildStyledItem('Calculator'),
-        _buildStyledItem('Guide'),
-        _buildStyledItem('Logout'),
-      ],
-    );
-  }
-
-  PopupMenuItem<String> _buildStyledItem(String label) {
-    return PopupMenuItem<String>(
-      value: label.toLowerCase(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        width: 150,
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        const PopupMenuItem<String>(
+          value: 'profile',
+          child: Row(
+            children: [
+              Icon(Icons.person),
+              SizedBox(width: 8),
+              Text('Profile'),
+            ],
+          ),
         ),
-      ),
+        const PopupMenuItem<String>(
+          value: 'friends',
+          child: Row(
+            children: [
+              Icon(Icons.people),
+              SizedBox(width: 8),
+              Text('Friends'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'calculator',
+          child: Row(
+            children: [
+              Icon(Icons.calculate),
+              SizedBox(width: 8),
+              Text('Calculator'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'kanban',
+          child: Row(
+            children: [
+              Icon(Icons.view_kanban),
+              SizedBox(width: 8),
+              Text('Kanban Board'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: 'logout',
+          child: Row(
+            children: [
+              Icon(Icons.logout),
+              SizedBox(width: 8),
+              Text('Logout'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
