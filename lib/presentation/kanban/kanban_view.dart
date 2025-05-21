@@ -259,23 +259,8 @@ class _KanbanViewState extends State<KanbanView> {
                 );
                 await _apiService.addTaskToKanban(
                     _kanbanId!, backendTask['_id']);
-                String localStatus = backendTask['status'] == 'pending'
-                    ? 'todo'
-                    : backendTask['status'] == 'in_progress'
-                        ? 'in_progress'
-                        : 'done';
-                setState(() {
-                  tasks.add(KanbanTask(
-                    id: backendTask['_id'],
-                    title: backendTask['title'],
-                    description: backendTask['description'],
-                    status: localStatus,
-                    createdAt: DateTime.now(),
-                    dueDate: DateTime.parse(backendTask['due_date']),
-                    subject: _subjectController.text,
-                    priority: _selectedPriority,
-                  ));
-                });
+                // Refresh list after add
+                await _fetchKanbanTasks(_kanbanId!);
                 _titleController.clear();
                 _descriptionController.clear();
                 _subjectController.clear();
@@ -302,13 +287,36 @@ class _KanbanViewState extends State<KanbanView> {
     );
   }
 
+  // Helper to map local status to backend status
+  String _toBackendStatus(String localStatus) {
+    switch (localStatus) {
+      case 'todo':
+        return 'pending';
+      case 'in_progress':
+        return 'in_progress';
+      case 'done':
+        return 'completed';
+      default:
+        return 'pending';
+    }
+  }
+
+  // Helper to map backend status to local status
+  String _toLocalStatus(String backendStatus) {
+    switch (backendStatus) {
+      case 'pending':
+        return 'todo';
+      case 'in_progress':
+        return 'in_progress';
+      case 'completed':
+        return 'done';
+      default:
+        return 'todo';
+    }
+  }
+
   Future<void> _updateTaskStatus(KanbanTask task, String newStatus) async {
-    // Map local status to backend status
-    String backendStatus = newStatus == 'todo'
-        ? 'pending'
-        : newStatus == 'in_progress'
-            ? 'in_progress'
-            : 'done';
+    String backendStatus = _toBackendStatus(newStatus);
     String backendPriority = task.priority == 3
         ? 'high'
         : task.priority == 2
@@ -324,25 +332,10 @@ class _KanbanViewState extends State<KanbanView> {
         status: backendStatus,
         userId: userId,
       );
-      // Refresh from backend
-      final backendTask = await _apiService.getKanbanTaskById(task.id);
-      setState(() {
-        final index = tasks.indexWhere((t) => t.id == task.id);
-        if (index != -1) {
-          tasks[index] = task.copyWith(
-            status: newStatus,
-            title: backendTask['title'],
-            description: backendTask['description'],
-            dueDate: DateTime.parse(backendTask['due_date']),
-            priority: backendTask['priority'] == 'high'
-                ? 3
-                : backendTask['priority'] == 'medium'
-                    ? 2
-                    : 1,
-            // subject remains local
-          );
-        }
-      });
+      // Refresh list after status change
+      if (_kanbanId != null) {
+        await _fetchKanbanTasks(_kanbanId!);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error updating status: $e')),
@@ -450,37 +443,29 @@ class _KanbanViewState extends State<KanbanView> {
                     : _selectedPriority == 2
                         ? 'medium'
                         : 'low';
-                String backendStatus = task.status; // keep current status
+                String backendStatus =
+                    _toBackendStatus(task.status); // map local to backend
                 try {
+                  final dueDateTime = DateTime(
+                    _selectedDueDate!.year,
+                    _selectedDueDate!.month,
+                    _selectedDueDate!.day,
+                    _selectedDueTime!.hour,
+                    _selectedDueTime!.minute,
+                  );
                   await _apiService.updateKanbanTaskOnBackend(
                     id: task.id,
                     title: _titleController.text,
                     description: _descriptionController.text,
-                    dueDate: _selectedDueDate ?? DateTime.now(),
+                    dueDate: dueDateTime,
                     priority: backendPriority,
                     status: backendStatus,
                     userId: userId,
                   );
-                  // Refresh from backend
-                  final backendTask =
-                      await _apiService.getKanbanTaskById(task.id);
-                  setState(() {
-                    final index = tasks.indexWhere((t) => t.id == task.id);
-                    if (index != -1) {
-                      tasks[index] = task.copyWith(
-                        title: backendTask['title'],
-                        description: backendTask['description'],
-                        dueDate: DateTime.parse(backendTask['due_date']),
-                        priority: backendTask['priority'] == 'high'
-                            ? 3
-                            : backendTask['priority'] == 'medium'
-                                ? 2
-                                : 1,
-                        status: backendTask['status'],
-                        // subject remains local
-                      );
-                    }
-                  });
+                  // Refresh list after edit
+                  if (_kanbanId != null) {
+                    await _fetchKanbanTasks(_kanbanId!);
+                  }
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error updating task: $e')),
@@ -508,9 +493,10 @@ class _KanbanViewState extends State<KanbanView> {
         await _apiService.removeTaskFromKanban(_kanbanId!, task.id);
       }
       await _apiService.deleteKanbanTaskOnBackend(task.id);
-      setState(() {
-        tasks.removeWhere((t) => t.id == task.id);
-      });
+      // Refresh list after delete
+      if (_kanbanId != null) {
+        await _fetchKanbanTasks(_kanbanId!);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error deleting task: $e')),
@@ -640,7 +626,6 @@ class _KanbanViewState extends State<KanbanView> {
 
   Widget _buildColumn(String title, String status, {bool showHeader = false}) {
     final columnTasks = tasks.where((task) => task.status == status).toList();
-
     return Card(
       margin: const EdgeInsets.all(8),
       child: Column(
@@ -658,47 +643,53 @@ class _KanbanViewState extends State<KanbanView> {
               ),
             ),
           Expanded(
-            child: ListView.builder(
-              itemCount: columnTasks.length,
-              itemBuilder: (context, index) {
-                final task = columnTasks[index];
-                return Card(
-                  margin: const EdgeInsets.all(4),
-                  color: _getPriorityColor(task.priority),
-                  child: ListTile(
-                    title: Text(task.title),
-                    onTap: () => _showTaskDetails(task),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _editTask(task),
+            child: columnTasks.isEmpty
+                ? const Center(child: Text('No tasks'))
+                : ListView.builder(
+                    itemCount: columnTasks.length,
+                    itemBuilder: (context, index) {
+                      final task = columnTasks[index];
+                      return Card(
+                        margin: const EdgeInsets.all(4),
+                        color: _getPriorityColor(task.priority),
+                        child: ListTile(
+                          title: Text(task.title),
+                          onTap: () => _showTaskDetails(task),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () => _editTask(task),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () async => await _deleteTask(task),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back),
+                                onPressed: status != 'todo'
+                                    ? () async => await _updateTaskStatus(
+                                        task,
+                                        _statuses[
+                                            _statuses.indexOf(status) - 1])
+                                    : null,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_forward),
+                                onPressed: status != 'done'
+                                    ? () async => await _updateTaskStatus(
+                                        task,
+                                        _statuses[
+                                            _statuses.indexOf(status) + 1])
+                                    : null,
+                              ),
+                            ],
+                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () async => await _deleteTask(task),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back),
-                          onPressed: status != 'todo'
-                              ? () async => await _updateTaskStatus(task,
-                                  _statuses[_statuses.indexOf(status) - 1])
-                              : null,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward),
-                          onPressed: status != 'done'
-                              ? () async => await _updateTaskStatus(task,
-                                  _statuses[_statuses.indexOf(status) + 1])
-                              : null,
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

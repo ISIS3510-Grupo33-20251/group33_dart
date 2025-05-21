@@ -666,20 +666,25 @@ class ApiServiceAdapter {
   }
 
   Future<List<Map<String, dynamic>>> getTasksForKanban(String kanbanId) async {
-    final url = Uri.parse('$backendUrl/kanban/$kanbanId/tasks');
+    final url = Uri.parse('$backendUrl/kanban/$kanbanId');
     final response = await http.get(
       url,
       headers: {'accept': 'application/json'},
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      if (data is List) {
-        return List<Map<String, dynamic>>.from(data);
-      } else if (data is Map && data['tasks'] is List) {
-        return List<Map<String, dynamic>>.from(data['tasks']);
-      } else {
-        return [];
+      final List<dynamic> allTaskIds = data['all_tasks'] ?? [];
+      List<Map<String, dynamic>> tasks = [];
+      for (var taskId in allTaskIds) {
+        try {
+          final task = await getKanbanTaskById(taskId);
+          tasks.add(task);
+        } catch (e) {
+          // If a task is not found, skip it
+          continue;
+        }
       }
+      return tasks;
     } else {
       throw Exception('Failed to get kanban tasks: ${response.body}');
     }
