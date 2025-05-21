@@ -627,6 +627,63 @@ class ApiServiceAdapter {
       throw Exception('Failed to get task: ${response.body}');
     }
   }
+
+  Future<String> getKanbanIdByUser(String userId) async {
+    final url = Uri.parse('$backendUrl/users/$userId/kanban');
+    final response = await http.get(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['kanban_id'];
+    } else {
+      throw Exception('Failed to get kanban id: ${response.body}');
+    }
+  }
+
+  Future<void> addTaskToKanban(String kanbanId, String taskId) async {
+    final url = Uri.parse('$backendUrl/kanban/$kanbanId/tasks/$taskId');
+    final response = await http.post(
+      url,
+      headers: {'accept': 'application/json'},
+      body: '',
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to add task to kanban: ${response.body}');
+    }
+  }
+
+  Future<void> removeTaskFromKanban(String kanbanId, String taskId) async {
+    final url = Uri.parse('$backendUrl/kanban/$kanbanId/tasks/$taskId');
+    final response = await http.delete(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to remove task from kanban: ${response.body}');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTasksForKanban(String kanbanId) async {
+    final url = Uri.parse('$backendUrl/kanban/$kanbanId/tasks');
+    final response = await http.get(
+      url,
+      headers: {'accept': 'application/json'},
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(data);
+      } else if (data is Map && data['tasks'] is List) {
+        return List<Map<String, dynamic>>.from(data['tasks']);
+      } else {
+        return [];
+      }
+    } else {
+      throw Exception('Failed to get kanban tasks: ${response.body}');
+    }
+  }
 }
 
 Future<bool> hasInternetConnection() async {

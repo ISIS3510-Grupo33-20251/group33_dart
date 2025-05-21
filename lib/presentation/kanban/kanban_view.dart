@@ -22,6 +22,7 @@ class _KanbanViewState extends State<KanbanView> {
   int _selectedPriority = 2;
   int _currentColumnIndex = 0;
   bool _isHorizontalView = false;
+  String? _kanbanId;
 
   final List<String> _columns = ['To Do', 'In Progress', 'Done'];
   final List<String> _statuses = ['todo', 'in_progress', 'done'];
@@ -39,6 +40,62 @@ class _KanbanViewState extends State<KanbanView> {
         return const Color(0xFFFFCDD2); // pastel red/rose
       default:
         return Colors.grey.shade200;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchKanbanId();
+  }
+
+  Future<void> _fetchKanbanId() async {
+    try {
+      final id = await _apiService.getKanbanIdByUser(userId);
+      setState(() {
+        _kanbanId = id;
+      });
+      await _fetchKanbanTasks(id);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching Kanban ID: $e')),
+      );
+    }
+  }
+
+  Future<void> _fetchKanbanTasks(String kanbanId) async {
+    try {
+      final backendTasks = await _apiService.getTasksForKanban(kanbanId);
+      setState(() {
+        tasks = backendTasks.map((backendTask) {
+          String localStatus = backendTask['status'] == 'pending'
+              ? 'todo'
+              : backendTask['status'] == 'in_progress'
+                  ? 'in_progress'
+                  : 'done';
+          int localPriority = backendTask['priority'] == 'high'
+              ? 3
+              : backendTask['priority'] == 'medium'
+                  ? 2
+                  : 1;
+          return KanbanTask(
+            id: backendTask['_id'],
+            title: backendTask['title'],
+            description: backendTask['description'] ?? '',
+            status: localStatus,
+            createdAt: DateTime.now(),
+            dueDate: backendTask['due_date'] != null
+                ? DateTime.parse(backendTask['due_date'])
+                : null,
+            subject: backendTask['subject'],
+            priority: localPriority,
+          );
+        }).toList();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching Kanban tasks: $e')),
+      );
     }
   }
 
@@ -174,6 +231,11 @@ class _KanbanViewState extends State<KanbanView> {
                       'Please select a due date and time.');
                   return;
                 }
+                if (_kanbanId == null) {
+                  await _showValidationError(
+                      'Kanban board not loaded. Try again.');
+                  return;
+                }
                 final dueDateTime = DateTime(
                   _selectedDueDate!.year,
                   _selectedDueDate!.month,
@@ -195,7 +257,8 @@ class _KanbanViewState extends State<KanbanView> {
                   status: backendStatus,
                   userId: userId,
                 );
-                // Map backend status to local status
+                await _apiService.addTaskToKanban(
+                    _kanbanId!, backendTask['_id']);
                 String localStatus = backendTask['status'] == 'pending'
                     ? 'todo'
                     : backendTask['status'] == 'in_progress'
@@ -441,6 +504,9 @@ class _KanbanViewState extends State<KanbanView> {
 
   Future<void> _deleteTask(KanbanTask task) async {
     try {
+      if (_kanbanId != null) {
+        await _apiService.removeTaskFromKanban(_kanbanId!, task.id);
+      }
       await _apiService.deleteKanbanTaskOnBackend(task.id);
       setState(() {
         tasks.removeWhere((t) => t.id == task.id);
