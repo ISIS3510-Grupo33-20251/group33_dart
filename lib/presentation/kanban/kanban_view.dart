@@ -47,7 +47,7 @@ class _KanbanViewState extends State<KanbanView> {
       case 3:
         return const Color(0xFFFFCDD2); // pastel red/rose
       default:
-        return Colors.grey.shade200;
+        return Colors.grey.shade200; // Default grey
     }
   }
 
@@ -201,7 +201,7 @@ class _KanbanViewState extends State<KanbanView> {
 
   Future<void> _addTask() async {
     if (_kanbanId == null) {
-      await _showValidationError('No se ha cargado el tablero Kanban.');
+      await _showValidationError('Kanban board not loaded.');
       return;
     }
     showDialog(
@@ -759,6 +759,11 @@ class _KanbanViewState extends State<KanbanView> {
                   ? 'Switch to Vertical View'
                   : 'Switch to Horizontal View',
             ),
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: _showTaskSummaryDialog,
+              tooltip: 'Mostrar Resumen de Tareas',
+            ),
           ],
         ),
         body: (_kanbanId == null && !_isOffline)
@@ -908,6 +913,103 @@ class _KanbanViewState extends State<KanbanView> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showTaskSummaryDialog() {
+    final int todoCount = tasks.where((t) => t.status == 'todo').length;
+    final int inProgressCount =
+        tasks.where((t) => t.status == 'in_progress').length;
+    final int doneCount = tasks.where((t) => t.status == 'done').length;
+
+    // Contadores por prioridad
+    final int lowPriorityCount = tasks.where((t) => t.priority == 1).length;
+    final int mediumPriorityCount = tasks.where((t) => t.priority == 2).length;
+    final int highPriorityCount = tasks.where((t) => t.priority == 3).length;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Task Summary'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment:
+              CrossAxisAlignment.start, // Alinear el contenido a la izquierda
+          children: [
+            Text('By Status:',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87)), // Color de texto oscuro
+            const SizedBox(height: 4),
+            _buildStatusSummary('To Do', todoCount, Colors.amber.shade700),
+            const SizedBox(height: 4), // Espacio reducido
+            _buildStatusSummary(
+                'In Progress', inProgressCount, Colors.blue.shade400),
+            const SizedBox(height: 4),
+            _buildStatusSummary('Done', doneCount, Colors.green.shade400),
+            const SizedBox(
+                height: 16), // Espacio antes de la sección de prioridad
+            Text('By Priority:',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87)), // Color de texto oscuro
+            const SizedBox(height: 4),
+            _buildStatusSummary('Low', lowPriorityCount,
+                const Color(0xFFC8E6C9)), // Verde pastel
+            const SizedBox(height: 4),
+            _buildStatusSummary('Medium', mediumPriorityCount,
+                const Color(0xFFFFF9C4)), // Amarillo pastel
+            const SizedBox(height: 4),
+            _buildStatusSummary('High', highPriorityCount,
+                const Color(0xFFFFCDD2)), // Rojo pastel/rosa
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusSummary(String label, int count, Color color) {
+    // Usamos un color de texto oscuro para asegurar la legibilidad
+    final Color textColor = Colors.black87;
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(
+                0.15), // Fondo claro con el color de estado/prioridad
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$label: ',
+                style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: textColor,
+                    fontSize: 12), // Usar color de texto oscuro
+              ),
+              Text(
+                '$count',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                    fontSize: 14), // Usar color de texto oscuro
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
