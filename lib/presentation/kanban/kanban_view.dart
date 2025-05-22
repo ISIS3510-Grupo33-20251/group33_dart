@@ -633,42 +633,57 @@ class _KanbanViewState extends State<KanbanView> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(task.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (task.description.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text('Description: ${task.description}'),
-              ),
-            if (task.subject != null && task.subject!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text('Subject: ${task.subject}'),
-              ),
-            if (task.dueDate != null)
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (task.description.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text('Description: ${task.description}'),
+                ),
+              if (task.subject != null && task.subject!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text('Subject: ${task.subject}'),
+                ),
+              if (task.dueDate != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                      'Due: ${task.dueDate!.toString().replaceFirst("T", " ").substring(0, 16)}'),
+                ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Text(
-                    'Due: ${task.dueDate!.toString().replaceFirst("T", " ").substring(0, 16)}'),
+                    'Priority: ${task.priority == 3 ? 'High' : task.priority == 2 ? 'Medium' : 'Low'}'),
               ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                  'Priority: ${task.priority == 3 ? 'High' : task.priority == 2 ? 'Medium' : 'Low'}'),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                  'Status: ${task.status == 'todo' ? 'To Do' : task.status == 'in_progress' ? 'In Progress' : 'Done'}'),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                    'Status: ${task.status == 'todo' ? 'To Do' : task.status == 'in_progress' ? 'In Progress' : 'Done'}'),
+              ),
+            ],
+          ),
         ),
         actions: [
+          if (_isHorizontalView) ...[
+            TextButton(
+              onPressed: () => _editTask(task),
+              child: const Text('Editar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await _deleteTask(task);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Borrar'),
+            ),
+          ],
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: const Text('Cerrar'),
           ),
         ],
       ),
@@ -829,46 +844,63 @@ class _KanbanViewState extends State<KanbanView> {
             child: columnTasks.isEmpty
                 ? const Center(child: Text('No tasks'))
                 : ListView.builder(
+                    padding: const EdgeInsets.all(8),
                     itemCount: columnTasks.length,
                     itemBuilder: (context, index) {
                       final task = columnTasks[index];
                       return Card(
-                        margin: const EdgeInsets.all(4),
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 8),
                         color: _getPriorityColor(task.priority),
                         child: ListTile(
-                          title: Text(task.title),
-                          onTap: () => _showTaskDetails(task),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () => _editTask(task),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () async => await _deleteTask(task),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back),
-                                onPressed: status != 'todo'
-                                    ? () async => await _updateTaskStatus(
-                                        task,
-                                        _statuses[
-                                            _statuses.indexOf(status) - 1])
-                                    : null,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.arrow_forward),
-                                onPressed: status != 'done'
-                                    ? () async => await _updateTaskStatus(
-                                        task,
-                                        _statuses[
-                                            _statuses.indexOf(status) + 1])
-                                    : null,
-                              ),
-                            ],
+                          title: Text(
+                            task.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: _isHorizontalView ? 14 : 16,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            maxLines: 1,
                           ),
+                          onTap: () => _showTaskDetails(task),
+                          trailing: !_isHorizontalView
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit, size: 20),
+                                      onPressed: () => _editTask(task),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete, size: 20),
+                                      onPressed: () async =>
+                                          await _deleteTask(task),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_back,
+                                          size: 20),
+                                      onPressed: status != 'todo'
+                                          ? () async => await _updateTaskStatus(
+                                              task,
+                                              _statuses[
+                                                  _statuses.indexOf(status) -
+                                                      1])
+                                          : null,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_forward,
+                                          size: 20),
+                                      onPressed: status != 'done'
+                                          ? () async => await _updateTaskStatus(
+                                              task,
+                                              _statuses[
+                                                  _statuses.indexOf(status) +
+                                                      1])
+                                          : null,
+                                    ),
+                                  ],
+                                )
+                              : null,
                         ),
                       );
                     },
