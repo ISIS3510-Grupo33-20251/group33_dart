@@ -17,6 +17,7 @@ import 'presentation/profile/edit_profile_screen.dart';
 import 'data/adapters/time_of_day_adapter.dart';
 import 'data/adapters/color_adapter.dart';
 import 'domain/models/class_model.dart';
+import 'presentation/reminders/reminder_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -88,7 +89,8 @@ class MainApp extends StatelessWidget {
           '/schedule': (context) => const ScheduleScreen(),
           '/profile': (_) => const ProfileScreen(),
           '/edit_profile': (_) => const EditProfileScreen(),
-          '/calculator': (_) => const CalculatorWidget()
+          '/calculator': (_) => const CalculatorWidget(),
+          '/reminders': (_)=> const ReminderScreen()
         },
       ),
     );

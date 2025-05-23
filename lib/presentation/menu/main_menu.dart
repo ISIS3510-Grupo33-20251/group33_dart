@@ -210,6 +210,9 @@ class MainMenuPage extends StatelessWidget {
       body: const ScheduleScreen(),
       bottomNavigationBar: BottomNavigationBar(
         onTap: (index) {
+          if (index==0){
+             Navigator.pushNamed(context, '/reminders');
+          }
           if (index == 2) {
             Navigator.pushNamed(context, '/notes');
           }

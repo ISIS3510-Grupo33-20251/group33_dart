@@ -45,5 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+<string>Esta app necesita acceder a tu ubicación para mostrar amigos cercanos.</string>
+<key>NSLocationAlwaysUsageDescription</key>
+<string>Usamos tu ubicación para ofrecerte una mejor experiencia.</string>
+
 </dict>
 </plist>

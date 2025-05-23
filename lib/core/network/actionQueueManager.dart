@@ -171,6 +171,14 @@ class ActionQueueManager {
     } else if (action == 'note delete') {
       await apiServiceAdapter.deleteNote(id);
     }
+    else if (action == 'reminder create') {
+  final reminderJson = await _localStorage.getReminder(id);
+  await apiServiceAdapter.createReminderFromJson(reminderJson);
+} else if (action == 'reminder update') {
+  final reminderJson = await _localStorage.getReminder(id);
+  await apiServiceAdapter.updateReminderFromJson(id, reminderJson);
+}
+
   }
 
   /// Clean up timer

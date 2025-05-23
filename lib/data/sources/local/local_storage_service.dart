@@ -137,4 +137,27 @@ class LocalStorageService {
     classes.removeWhere((c) => c.id == classId);
     await saveClasses(classes);
   }
+  Future<void> saveReminders(List<Map<String, dynamic>> reminders) async {
+  final box = await Hive.openBox('reminders');
+  await box.put('reminders', reminders);
+}
+Future<List<Map<String, dynamic>>> loadReminders() async {
+  final box = await Hive.openBox('reminders');
+  final data = box.get('reminders');
+  if (data == null || data is! List) return [];
+  return data.cast<Map<String, dynamic>>();
+}
+Future<Map<String, dynamic>> getReminder(String id) async {
+  final box = await Hive.openBox('reminders');
+  final List<dynamic> reminders = box.get('reminders') ?? [];
+  final Map<String, dynamic>? reminder = reminders
+      .cast<Map<String, dynamic>>()
+      .firstWhere((e) => e['_id'] == id, orElse: () => {});
+  if (reminder == null || reminder.isEmpty) {
+    throw Exception('Reminder with ID $id not found');
+  }
+  return reminder;
+}
+
+
 }
