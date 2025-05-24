@@ -4,6 +4,7 @@ import '../../../models/kanban_task.dart';
 class KanbanLocalService {
   static const String _tasksBox = 'kanban_tasks';
   static const String _queueBox = 'kanban_action_queue';
+  static const String _kanbanIdBox = 'kanban_id';
 
   Future<void> ensureBoxesOpen() async {
     if (!Hive.isBoxOpen(_tasksBox)) {
@@ -51,5 +52,17 @@ class KanbanLocalService {
     await ensureBoxesOpen();
     final box = Hive.box(_queueBox);
     await box.delete('queue');
+  }
+
+  Future<void> saveKanbanId(String kanbanId) async {
+    await ensureBoxesOpen();
+    final box = await Hive.openBox(_kanbanIdBox);
+    await box.put('kanban_id', kanbanId);
+  }
+
+  Future<String?> loadKanbanId() async {
+    await ensureBoxesOpen();
+    final box = await Hive.openBox(_kanbanIdBox);
+    return box.get('kanban_id');
   }
 }
