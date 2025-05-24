@@ -46,6 +46,8 @@ class _NewReminderFormState extends State<NewReminderForm> {
   Widget build(BuildContext context) {
     final isEditing = widget.existingReminder != null;
 
+    const boldStyle = TextStyle(fontWeight: FontWeight.bold);
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: SingleChildScrollView(
@@ -63,23 +65,25 @@ class _NewReminderFormState extends State<NewReminderForm> {
                 labelText: "Title",
                 labelStyle: TextStyle(fontWeight: FontWeight.bold),
               ),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: boldStyle,
             ),
             const SizedBox(height: 8),
             TextField(
               readOnly: true,
               decoration: InputDecoration(
                 labelText: "Set Date",
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                labelStyle: boldStyle,
                 hintText: _selectedDate == null
                     ? "Choose date and time"
                     : DateFormat('yyyy-MM-dd hh:mm a').format(_selectedDate!),
+                hintStyle: boldStyle,
               ),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: boldStyle,
               onTap: () async {
                 final date = await showDatePicker(
                   context: context,
-                  initialDate: _selectedDate ?? DateTime.now().add(const Duration(hours: 1)),
+                  initialDate:
+                      _selectedDate ?? DateTime.now().add(const Duration(hours: 1)),
                   firstDate: DateTime.now(),
                   lastDate: DateTime(2100),
                 );
@@ -109,7 +113,7 @@ class _NewReminderFormState extends State<NewReminderForm> {
                 labelText: "Notes",
                 labelStyle: TextStyle(fontWeight: FontWeight.bold),
               ),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: boldStyle,
             ),
             const SizedBox(height: 16),
             Row(
@@ -117,68 +121,85 @@ class _NewReminderFormState extends State<NewReminderForm> {
               children: [
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text("Clear", style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    textStyle: boldStyle,
+                  ),
+                  child: const Text("Clear"),
                 ),
                 ElevatedButton(
                   onPressed: () async {
-  if (_selectedDate == null || _titleCtrl.text.trim().isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Title and date required")),
-    );
-    return;
-  }
+                    if (_selectedDate == null ||
+                        _titleCtrl.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Title and date required",
+                            style: boldStyle,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
 
-  final reminder = Reminder(
-    id: widget.existingReminder?.id ?? const Uuid().v4(),
-    userId: widget.userId,
-    entityType: 'task',
-    entityId: _titleCtrl.text.trim(),
-    remindAt: _selectedDate!,
-    status: widget.existingReminder?.status ?? 'pending',
-    notes: _notesCtrl.text.trim(),
-  );
+                    final reminder = Reminder(
+                      id: widget.existingReminder?.id ?? const Uuid().v4(),
+                      userId: widget.userId,
+                      entityType: 'task',
+                      entityId: _titleCtrl.text.trim(),
+                      remindAt: _selectedDate!,
+                      status: widget.existingReminder?.status ?? 'pending',
+                      notes: _notesCtrl.text.trim(),
+                    );
 
-  final reminderJson = reminder.toJson();
-  final box = await Hive.openBox('reminders');
-  List reminders = box.get('reminders') ?? [];
+                    final reminderJson = reminder.toJson();
+                    final box = await Hive.openBox('reminders');
+                    List reminders = box.get('reminders') ?? [];
 
-  reminders.removeWhere((r) => r['_id'] == reminder.id);
-  final hasConnection = await connectivityService.checkConnectivity();
-  if (!hasConnection) reminderJson['unsynced'] = true;
+                    reminders.removeWhere((r) => r['_id'] == reminder.id);
+                    final hasConnection =
+                        await connectivityService.checkConnectivity();
+                    if (!hasConnection) reminderJson['unsynced'] = true;
 
-  reminders.add(reminderJson);
-  await box.put('reminders', reminders);
+                    reminders.add(reminderJson);
+                    await box.put('reminders', reminders);
 
-  if (hasConnection) {
-    try {
-      if (isEditing) {
-        await widget.api.updateReminder(reminder);
-        await LocalStorageService().updateReminder(reminder.toJson()); 
-      } else {
-        await widget.api.createReminder(reminder);
-      }
-    } catch (e) {
-      await ActionQueueManager().addAction(
-        reminder.id,
-        isEditing ? 'reminder update' : 'reminder create',
-      );
-    }
-  } else {
-    await ActionQueueManager().addAction(
-      reminder.id,
-      isEditing ? 'reminder update' : 'reminder create',
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Reminder saved locally and will sync when online."),
-      ),
-    );
-  }
+                    if (hasConnection) {
+                      try {
+                        if (isEditing) {
+                          await widget.api.updateReminder(reminder);
+                          await LocalStorageService()
+                              .updateReminder(reminder.toJson());
+                        } else {
+                          await widget.api.createReminder(reminder);
+                        }
+                      } catch (e) {
+                        await ActionQueueManager().addAction(
+                          reminder.id,
+                          isEditing ? 'reminder update' : 'reminder create',
+                        );
+                      }
+                    } else {
+                      await ActionQueueManager().addAction(
+                        reminder.id,
+                        isEditing ? 'reminder update' : 'reminder create',
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Reminder saved locally and will sync when online.",
+                            style: boldStyle,
+                          ),
+                        ),
+                      );
+                    }
 
-  await widget.onSave(reminderJson);
-  if (context.mounted) Navigator.pop(context);
-},
-                  child: Text(isEditing ? "Update" : "Save", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    await widget.onSave(reminderJson);
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    textStyle: boldStyle,
+                  ),
+                  child: Text(isEditing ? "Update" : "Save"),
                 ),
               ],
             ),
@@ -189,11 +210,23 @@ class _NewReminderFormState extends State<NewReminderForm> {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text("Delete Reminder", style: TextStyle(fontWeight: FontWeight.bold)),
-                      content: const Text("Are you sure you want to delete this reminder?", style: TextStyle(fontWeight: FontWeight.bold)),
+                      title: const Text(
+                        "Delete Reminder",
+                        style: boldStyle,
+                      ),
+                      content: const Text(
+                        "Are you sure you want to delete this reminder?",
+                        style: boldStyle,
+                      ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel", style: TextStyle(fontWeight: FontWeight.bold))),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Delete", style: TextStyle(fontWeight: FontWeight.bold))),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text("Cancel", style: boldStyle),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text("Delete", style: boldStyle),
+                        ),
                       ],
                     ),
                   );
@@ -205,8 +238,11 @@ class _NewReminderFormState extends State<NewReminderForm> {
                     if (context.mounted) Navigator.pop(context);
                   }
                 },
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text("Delete", style: TextStyle(fontWeight: FontWeight.bold)),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  textStyle: boldStyle,
+                ),
+                child: const Text("Delete"),
               ),
           ],
         ),

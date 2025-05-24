@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:group33_dart/core/network/actionQueueManager.dart';
-import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import '../../domain/models/reminder.dart';
 import '../../services/api_service_adapter.dart';
 import 'new_reminder.dart';
 import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:group33_dart/services/connectivity_service.dart';
-
+import 'package:group33_dart/data/sources/local/cache_service.dart';
 import '../../globals.dart';
 
-final ApiServiceAdapter apiServiceAdapter = ApiServiceAdapter(backendUrl: backendUrl);
-final LocalStorageService localStorage = LocalStorageService();
-final ConnectivityService connectivityService = ConnectivityService();
+final apiServiceAdapter   = ApiServiceAdapter(backendUrl: backendUrl);
+final localStorageService = LocalStorageService();
+final connectivityService = ConnectivityService();
+final cacheService        = CacheService();
 
 class ReminderScreen extends StatefulWidget {
   const ReminderScreen({super.key});
-
   @override
   State<ReminderScreen> createState() => _ReminderScreenState();
 }
@@ -28,7 +27,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
   bool showCompleted = false;
 
   int get pendingCount => reminders.where((r) => r.status == 'pending').length;
-  int get doneCount => reminders.where((r) => r.status == 'done').length;
+  int get doneCount    => reminders.where((r) => r.status    == 'done'   ).length;
 
   @override
   void initState() {
@@ -37,90 +36,76 @@ class _ReminderScreenState extends State<ReminderScreen> {
   }
 
   Future<void> _initialize() async {
-    try {
-      final hasConnection = await connectivityService.checkConnectivity();
+    setState(() => isLoading = true);
+    final hasConnection = await connectivityService.checkConnectivity();
 
-      if (!hasConnection) {
-        error = 'No internet. Showing cached reminders.';
-        await _loadRemindersFromCache();
-        return;
-      }
-
+    if (!hasConnection) {
+      error = 'No internet. Showing cached reminders.';
+      await _loadRemindersFromCache();
+    } else {
       await _fetchReminders();
-    } catch (e) {
-      setState(() {
-        error = 'Error loading reminders: $e';
-        isLoading = false;
-      });
     }
   }
 
   Future<void> _loadRemindersFromCache() async {
-    final cached = await localStorage.loadReminders();
+    final cached = await localStorageService.loadReminders();
     setState(() {
-      reminders = cached.map((json) {
-        final Map<String, dynamic> m = json is Map<String, dynamic>
-            ? json
-            : Map<String, dynamic>.from(json);
-        return Reminder.fromJson(m);
-      }).toList();
+      reminders = cached.map((json) => Reminder.fromJson(json)).toList();
       isLoading = false;
     });
   }
 
   Future<void> _fetchReminders() async {
     try {
-      final fetched = await apiServiceAdapter.getRemindersForUser(userId);
-      final local = await localStorage.loadReminders();
+      final cachedJson = await cacheService.loadCachedFlashcard('reminders');
+      if (cachedJson.isNotEmpty) {
+        reminders = cachedJson.map((j) => Reminder.fromJson(j)).toList();
+        setState(() => isLoading = false);
+      }
 
+      final fetched  = await apiServiceAdapter.getRemindersForUser(userId);
+      final local    = await localStorageService.loadReminders();
       final unsynced = local.where((r) => r['unsynced'] == true).toList();
-      final synced = fetched.map((e) => e.toJson()).toList();
-      final merged = [...synced, ...unsynced];
+      final synced   = fetched.map((e) => e.toJson()).toList();
+      final merged   = [...synced, ...unsynced];
 
-      await localStorage.saveReminders(merged);
+      await cacheService.cacheFlashcard('reminders', merged);
+      await localStorageService.saveReminders(merged);
 
       setState(() {
-        reminders = merged.map((e) {
-          final Map<String, dynamic> m = e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e);
-          return Reminder.fromJson(m);
-        }).toList();
+        reminders = merged.map((e) => Reminder.fromJson(e)).toList();
         isLoading = false;
         error = '';
       });
     } catch (e) {
       setState(() {
-        error = 'Failed to fetch reminders from server: $e';
+        error = 'Failed to fetch reminders: $e';
         isLoading = false;
       });
     }
   }
 
   Future<void> _toggleReminderStatus(Reminder r) async {
-    final updatedStatus = r.status == 'pending' ? 'done' : 'pending';
+    final updatedStatus   = r.status == 'pending' ? 'done' : 'pending';
     final updatedReminder = r.copyWith(status: updatedStatus);
-    final reminderJson = updatedReminder.toJson();
+    final reminderJson    = updatedReminder.toJson();
 
-    final index = reminders.indexWhere((element) => element.id == r.id);
-    if (index != -1) {
-      setState(() => reminders[index] = updatedReminder);
+    final idx = reminders.indexWhere((x) => x.id == r.id);
+    if (idx == -1) return;
+    setState(() => reminders[idx] = updatedReminder);
 
-      final hasConnection = await connectivityService.checkConnectivity();
-
-      if (hasConnection) {
-        try {
-          await apiServiceAdapter.updateReminder(updatedReminder);
-        } catch (_) {
-          await ActionQueueManager().addAction(updatedReminder.id, 'reminder update');
-        }
-      } else {
-        reminderJson['unsynced'] = true;
-        await ActionQueueManager().addAction(updatedReminder.id, 'reminder update');
+    final hasConnection = await connectivityService.checkConnectivity();
+    if (hasConnection) {
+      try {
+        await apiServiceAdapter.updateReminder(updatedReminder);
+      } catch (_) {
+        await ActionQueueManager().addAction(r.id, 'reminder update');
       }
-
-      await localStorage.updateReminder(reminderJson);
+    } else {
+      reminderJson['unsynced'] = true;
+      await ActionQueueManager().addAction(r.id, 'reminder update');
     }
+    await localStorageService.updateReminder(reminderJson);
   }
 
   void _showNewReminderModal({Reminder? existingReminder}) {
@@ -136,17 +121,22 @@ class _ReminderScreenState extends State<ReminderScreen> {
           userId: userId,
           api: apiServiceAdapter,
           existingReminder: existingReminder,
-          onSave: (Map<String, dynamic> newJson) async {
-            final newReminder = Reminder.fromJson(newJson);
-            final existingIndex = reminders.indexWhere((r) => r.id == newReminder.id);
-            setState(() {
-              if (existingIndex != -1) {
-                reminders[existingIndex] = newReminder;
-              } else {
-                reminders.add(newReminder);
-              }
-            });
-          },
+         onSave: (Map<String, dynamic> newJson) async {
+  final newReminder = Reminder.fromJson(newJson);
+  setState(() {
+    // Buscamos si ya existía
+    final idx = reminders.indexWhere((r) => r.id == newReminder.id);
+    if (idx == -1) {
+      // No existía: lo añadimos (nuevo)
+      reminders.add(newReminder);
+    } else {
+      // Existía: lo reemplazamos (update)
+      reminders[idx] = newReminder;
+    }
+  });
+},
+
+
         ),
       ),
     );
@@ -154,75 +144,56 @@ class _ReminderScreenState extends State<ReminderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredReminders = showCompleted
-        ? reminders.where((r) => r.status == 'done').toList()
-        : reminders.where((r) => r.status == 'pending').toList();
+    final list = showCompleted
+      ? reminders.where((r) => r.status=='done'   ).toList()
+      : reminders.where((r) => r.status=='pending').toList();
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return DefaultTextStyle(
+      style: const TextStyle(fontWeight: FontWeight.bold),
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: true,
-        title: const Text(
-          'Reminders',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Reminders',
+            style: TextStyle(color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
           ),
+          actions: [
+            TextButton(
+  onPressed: () => setState(() => showCompleted = !showCompleted),
+  style: TextButton.styleFrom(
+    backgroundColor: showCompleted ? Colors.green : Colors.red,
+    foregroundColor: Colors.white,
+    textStyle: const TextStyle(fontWeight: FontWeight.bold),
+  ),
+  child: Text(showCompleted ? 'Done' : 'Pending'),
+),
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.black),
+              onPressed: _initialize,
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                showCompleted = !showCompleted;
-              });
-            },
-            style: TextButton.styleFrom(
-              backgroundColor: showCompleted ? Colors.green : Colors.red,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            ),
-            child: Text(
-              showCompleted ? "Done" : "Pending",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black),
-            onPressed: _initialize,
-          ),
-        ],
-      ),
-      body: isLoading
+        body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 if (error.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Text(
-                      error,
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Text(error, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                   ),
                 Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Text(
-                    'Pending: $pendingCount • Done: $doneCount',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Text('Pending: $pendingCount • Done: $doneCount',style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 Expanded(
                   child: ListView.builder(
-                    itemCount: filteredReminders.length,
-                    itemBuilder: (context, index) {
-                      final r = filteredReminders[index];
-                      final isUnsynced = r.toJson()['unsynced'] == true;
+                    itemCount: list.length,
+                    itemBuilder: (ctx, i) {
+                      final r       = list[i];
+                      final unsynced = r.toJson()['unsynced'] == true;
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                         child: Container(
@@ -231,7 +202,6 @@ class _ReminderScreenState extends State<ReminderScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             leading: Checkbox(
                               value: r.status == 'done',
                               onChanged: (_) => _toggleReminderStatus(r),
@@ -243,13 +213,10 @@ class _ReminderScreenState extends State<ReminderScreen> {
                                 Expanded(
                                   child: Text(
                                     r.entityId,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                 ),
-                                if (isUnsynced)
+                                if (unsynced)
                                   const Icon(Icons.sync_problem, color: Colors.orange, size: 18),
                               ],
                             ),
@@ -269,10 +236,11 @@ class _ReminderScreenState extends State<ReminderScreen> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.black,
-        onPressed: () => _showNewReminderModal(),
-        child: const Icon(Icons.add, color: Colors.white),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: Colors.black,
+          onPressed: () => _showNewReminderModal(),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }
