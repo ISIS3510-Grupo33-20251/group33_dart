@@ -25,6 +25,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
   List<Reminder> reminders = [];
   bool isLoading = true;
   String error = '';
+  bool showCompleted = false;
 
   int get pendingCount => reminders.where((r) => r.status == 'pending').length;
   int get doneCount => reminders.where((r) => r.status == 'done').length;
@@ -37,9 +38,8 @@ class _ReminderScreenState extends State<ReminderScreen> {
 
   Future<void> _initialize() async {
     try {
-      await _cleanOrphanActions();
-
       final hasConnection = await connectivityService.checkConnectivity();
+
       if (!hasConnection) {
         error = 'No internet. Showing cached reminders.';
         await _loadRemindersFromCache();
@@ -55,15 +55,6 @@ class _ReminderScreenState extends State<ReminderScreen> {
     }
   }
 
-  Future<void> _cleanOrphanActions() async {
-    final queue = await localStorage.loadActionQueue();
-    final reminders = await localStorage.loadReminders();
-    final reminderIds = reminders.map((r) => r['_id']).toSet();
-
-    final cleanedQueue = queue.where((action) => reminderIds.contains(action['id'])).toList();
-    await localStorage.saveActionQueue(cleanedQueue);
-  }
-
   Future<void> _loadRemindersFromCache() async {
     final cached = await localStorage.loadReminders();
     setState(() {
@@ -75,9 +66,15 @@ class _ReminderScreenState extends State<ReminderScreen> {
   Future<void> _fetchReminders() async {
     try {
       final fetched = await apiServiceAdapter.getRemindersForUser(userId);
-      await localStorage.saveReminders(fetched.map((e) => e.toJson()).toList());
+      final local = await localStorage.loadReminders();
+
+      final unsynced = local.where((r) => r['unsynced'] == true).toList();
+      final synced = fetched.map((e) => e.toJson()).toList();
+      final merged = [...synced, ...unsynced];
+
+      await localStorage.saveReminders(merged);
       setState(() {
-        reminders = fetched;
+        reminders = merged.map(Reminder.fromJson).toList();
         isLoading = false;
         error = '';
       });
@@ -92,16 +89,26 @@ class _ReminderScreenState extends State<ReminderScreen> {
   Future<void> _toggleReminderStatus(Reminder r) async {
     final updatedStatus = r.status == 'pending' ? 'done' : 'pending';
     final updatedReminder = r.copyWith(status: updatedStatus);
+    final reminderJson = updatedReminder.toJson();
 
     final index = reminders.indexWhere((element) => element.id == r.id);
     if (index != -1) {
       setState(() => reminders[index] = updatedReminder);
-      localStorage.saveReminders(reminders.map((e) => e.toJson()).toList());
-      try {
-        await apiServiceAdapter.updateReminderStatus(r.id, updatedStatus);
-      } catch (_) {
-        // Handle offline or retry logic if needed
+
+      final hasConnection = await connectivityService.checkConnectivity();
+
+      if (hasConnection) {
+        try {
+          await apiServiceAdapter.updateReminder(updatedReminder);
+        } catch (_) {
+          await ActionQueueManager().addAction(updatedReminder.id, 'reminder update');
+        }
+      } else {
+        reminderJson['unsynced'] = true;
+        await ActionQueueManager().addAction(updatedReminder.id, 'reminder update');
       }
+
+      await localStorage.updateReminder(reminderJson);
     }
   }
 
@@ -136,6 +143,10 @@ class _ReminderScreenState extends State<ReminderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredReminders = showCompleted
+        ? reminders.where((r) => r.status == 'done').toList()
+        : reminders.where((r) => r.status == 'pending').toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -151,6 +162,24 @@ class _ReminderScreenState extends State<ReminderScreen> {
           ),
         ),
         actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                showCompleted = !showCompleted;
+              });
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: showCompleted ? Colors.green : Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+            child: Text(
+              showCompleted ? "Done" : "Pending",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.black),
             onPressed: _initialize,
@@ -179,9 +208,9 @@ class _ReminderScreenState extends State<ReminderScreen> {
                 ),
                 Expanded(
                   child: ListView.builder(
-                    itemCount: reminders.length,
+                    itemCount: filteredReminders.length,
                     itemBuilder: (context, index) {
-                      final r = reminders[index];
+                      final r = filteredReminders[index];
                       final isUnsynced = r.toJson()['unsynced'] == true;
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:hive/hive.dart';
@@ -51,9 +52,9 @@ class _NewReminderFormState extends State<NewReminderForm> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              isEditing ? "Edit Reminder" : "New Reminder",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            const Text(
+              "New Reminder",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -73,7 +74,6 @@ class _NewReminderFormState extends State<NewReminderForm> {
                 hintText: _selectedDate == null
                     ? "Choose date and time"
                     : DateFormat('yyyy-MM-dd hh:mm a').format(_selectedDate!),
-                hintStyle: const TextStyle(fontWeight: FontWeight.bold),
               ),
               style: const TextStyle(fontWeight: FontWeight.bold),
               onTap: () async {
@@ -121,67 +121,68 @@ class _NewReminderFormState extends State<NewReminderForm> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if (_selectedDate == null || _titleCtrl.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Title and date required", style: TextStyle(fontWeight: FontWeight.bold))),
-                      );
-                      return;
-                    }
+  if (_selectedDate == null || _titleCtrl.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Title and date required")),
+    );
+    return;
+  }
 
-                    final reminder = Reminder(
-                      id: widget.existingReminder?.id ?? const Uuid().v4(),
-                      userId: widget.userId,
-                      entityType: 'task',
-                      entityId: _titleCtrl.text.trim(),
-                      remindAt: _selectedDate!,
-                      status: widget.existingReminder?.status ?? 'pending',
-                      notes: _notesCtrl.text.trim(),
-                    );
+  final reminder = Reminder(
+    id: widget.existingReminder?.id ?? const Uuid().v4(),
+    userId: widget.userId,
+    entityType: 'task',
+    entityId: _titleCtrl.text.trim(),
+    remindAt: _selectedDate!,
+    status: widget.existingReminder?.status ?? 'pending',
+    notes: _notesCtrl.text.trim(),
+  );
 
-                    final hasConnection = await connectivityService.checkConnectivity();
-                    final box = await Hive.openBox('reminders');
-                    final List reminders = box.get('reminders') ?? [];
+  final reminderJson = reminder.toJson();
+  final box = await Hive.openBox('reminders');
+  List reminders = box.get('reminders') ?? [];
 
-                    reminders.removeWhere((r) => r['_id'] == reminder.id);
-                    final reminderJson = reminder.toJson();
-                    if (!hasConnection) reminderJson['unsynced'] = true;
-                    reminders.add(reminderJson);
-                    await box.put('reminders', reminders);
+  reminders.removeWhere((r) => r['_id'] == reminder.id);
+  final hasConnection = await connectivityService.checkConnectivity();
+  if (!hasConnection) reminderJson['unsynced'] = true;
 
-                    if (hasConnection) {
-                      try {
-                        if (isEditing) {
-                          await widget.api.updateReminder(reminder);
-                        } else {
-                          await widget.api.createReminder(reminder);
-                        }
-                      } catch (e) {
-                        await ActionQueueManager().addAction(
-                          reminder.id,
-                          isEditing ? 'reminder update' : 'reminder create',
-                        );
-                      }
-                    } else {
-                      await ActionQueueManager().addAction(
-                        reminder.id,
-                        isEditing ? 'reminder update' : 'reminder create',
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Reminder saved locally and will sync when online.", style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                      );
-                    }
+  reminders.add(reminderJson);
+  await box.put('reminders', reminders);
 
-                    await widget.onSave(reminderJson);
-                    if (context.mounted) Navigator.pop(context);
-                  },
+  if (hasConnection) {
+    try {
+      if (isEditing) {
+        await widget.api.updateReminder(reminder);
+        await LocalStorageService().updateReminder(reminder.toJson()); // ✅ GUARDAR LOCALMENTE
+      } else {
+        await widget.api.createReminder(reminder);
+      }
+    } catch (e) {
+      await ActionQueueManager().addAction(
+        reminder.id,
+        isEditing ? 'reminder update' : 'reminder create',
+      );
+    }
+  } else {
+    await ActionQueueManager().addAction(
+      reminder.id,
+      isEditing ? 'reminder update' : 'reminder create',
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Reminder saved locally and will sync when online."),
+      ),
+    );
+  }
+
+  await widget.onSave(reminderJson);
+  if (context.mounted) Navigator.pop(context);
+},
                   child: Text(isEditing ? "Update" : "Save", style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-
             if (isEditing)
               TextButton(
                 onPressed: () async {

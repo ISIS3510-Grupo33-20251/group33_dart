@@ -778,11 +778,12 @@ Future<void> createReminderFromJson(Map<String, dynamic> json) async {
 }
 
 Future<void> updateReminderFromJson(String id, Map<String, dynamic> json) async {
+  final Map<String, dynamic> sanitizedJson = Map.of(json)..remove('_id');
   final url = Uri.parse('$backendUrl/reminders/$id');
   final response = await http.put(
     url,
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode(json),
+    body: jsonEncode(sanitizedJson),
   );
   if (response.statusCode != 200) {
     throw Exception('Failed to update reminder from JSON');

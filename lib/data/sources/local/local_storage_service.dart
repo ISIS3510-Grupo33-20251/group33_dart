@@ -150,14 +150,26 @@ Future<List<Map<String, dynamic>>> loadReminders() async {
 Future<Map<String, dynamic>> getReminder(String id) async {
   final box = await Hive.openBox('reminders');
   final List<dynamic> reminders = box.get('reminders') ?? [];
-  final Map<String, dynamic>? reminder = reminders
-      .cast<Map<String, dynamic>>()
-      .firstWhere((e) => e['_id'] == id, orElse: () => {});
-  if (reminder == null || reminder.isEmpty) {
-    throw Exception('Reminder with ID $id not found');
-  }
-  return reminder;
+  final reminder = reminders
+    .cast<Map<String, dynamic>>()
+    .firstWhere((e) => e['_id'] == id, orElse: () => throw Exception('Reminder with ID $id not found'));
+return reminder;
 }
+Future<void> updateReminder(Map<String, dynamic> updatedReminder) async {
+  final box = await Hive.openBox('reminders');
+  final List<dynamic> reminders = box.get('reminders') ?? [];
+
+  final index = reminders.indexWhere((r) => r['_id'] == updatedReminder['_id']);
+
+  if (index != -1) {
+    reminders[index] = updatedReminder;
+  } else {
+    reminders.add(updatedReminder); // fallback
+  }
+
+  await box.put('reminders', reminders);
+}
+
 
 
 }
