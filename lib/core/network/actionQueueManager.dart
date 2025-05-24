@@ -12,16 +12,14 @@ class ActionQueueManager {
   ActionQueueManager._internal();
 
   final LocalStorageService _localStorage = LocalStorageService();
-  final ApiServiceAdapter apiServiceAdapter =
-      ApiServiceAdapter(backendUrl: backendUrl);
+  final ApiServiceAdapter apiServiceAdapter = ApiServiceAdapter(backendUrl: backendUrl);
 
   bool _isProcessing = false;
   bool _isConnected = false;
   Timer? _timer;
 
   /// Number of pending actions in the queue
-  Future<int> get queueLength async =>
-      (await _localStorage.loadActionQueue()).length;
+  Future<int> get queueLength async => (await _localStorage.loadActionQueue()).length;
 
   /// Initialize the queue manager: perform an immediate check and start monitoring
   Future<void> init() async {
@@ -42,16 +40,14 @@ class ActionQueueManager {
   /// Start periodic monitoring of the connection
   Future<void> _startMonitoring() async {
     await Future.delayed(const Duration(milliseconds: 100));
-    _timer =
-        Timer.periodic(const Duration(seconds: 5), (_) => _checkConnection());
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _checkConnection());
   }
 
   /// Check the internet connection using an isolate
   Future<void> _checkConnection() async {
     print(await _localStorage.loadActionQueue());
     try {
-      final receivePort =
-          ReceivePort(); // Puerto para recibir mensajes del Isolate
+      final receivePort = ReceivePort(); // Puerto para recibir mensajes del Isolate
 
       // Llama al Isolate para realizar la verificación de conexión
       await Isolate.spawn(checkConnectionInIsolate, receivePort.sendPort);
@@ -59,20 +55,17 @@ class ActionQueueManager {
       // Espera el resultado del Isolate
       final result = await receivePort.first;
 
-      setConnectionStatus(
-          result); // Establece el estado de la conexión basado en el resultado
+      setConnectionStatus(result); // Establece el estado de la conexión basado en el resultado
     } catch (e) {
       print('Error verifying connection in isolate: $e');
-      setConnectionStatus(
-          false); // En caso de error, establece la conexión como falsa
+      setConnectionStatus(false); // En caso de error, establece la conexión como falsa
     }
   }
 
   /// Function to be executed in the isolate to check the internet connection
   static Future<void> checkConnectionInIsolate(SendPort sendPort) async {
     try {
-      final result =
-          await checkInternetConnection(); // Verificación de conexión
+      final result = await checkInternetConnection(); // Verificación de conexión
       sendPort.send(result); // Enviar el resultado al puerto de envío
     } catch (e) {
       print('Error in isolate: $e');
@@ -136,8 +129,7 @@ class ActionQueueManager {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final endTime = DateTime.now().add(timeout);
-    while (
-        (await _localStorage.loadActionQueue()).isNotEmpty || _isProcessing) {
+    while ((await _localStorage.loadActionQueue()).isNotEmpty || _isProcessing) {
       if (DateTime.now().isAfter(endTime)) {
         throw Exception('Timeout waiting for empty queue');
       }
@@ -175,7 +167,9 @@ class ActionQueueManager {
       await apiServiceAdapter.deleteAllCalcInfo(userId);
       print('borrados');
       await apiServiceAdapter.uploadSavedData(
-          await _localStorage.loadCalcData(), userId);
+        await _localStorage.loadCalcData(),
+        userId,
+      );
     } else if (action == 'reminder create') {
       final reminderJson = await _localStorage.getReminder(id);
       await apiServiceAdapter.createReminderFromJson(reminderJson);
