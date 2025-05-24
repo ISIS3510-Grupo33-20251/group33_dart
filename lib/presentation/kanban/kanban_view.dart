@@ -38,6 +38,13 @@ class _KanbanViewState extends State<KanbanView> {
       ApiServiceAdapter(backendUrl: backendUrl);
   final KanbanLocalService _localService = KanbanLocalService();
 
+  // Añadir mapa de caché para tareas por estado
+  final Map<String, List<KanbanTask>> _tasksByStatus = {};
+
+  // Añadir variables para métricas
+  final Map<String, Stopwatch> _operationTimers = {};
+  final Map<String, List<int>> _operationTimes = {};
+
   Color _getPriorityColor(int priority) {
     switch (priority) {
       case 1:
@@ -121,10 +128,10 @@ class _KanbanViewState extends State<KanbanView> {
   Future<void> _fetchKanbanTasks(String kanbanId) async {
     try {
       if (_isOffline) {
-        // Load from local storage
         final localTasks = await _localService.loadTasks();
         setState(() {
           tasks = localTasks;
+          _updateTasksCache();
         });
         return;
       }
@@ -150,6 +157,7 @@ class _KanbanViewState extends State<KanbanView> {
             priority: localPriority,
           );
         }).toList();
+        _updateTasksCache();
       });
     } catch (e) {
       final isOfflineNow =
@@ -439,7 +447,32 @@ class _KanbanViewState extends State<KanbanView> {
     }
   }
 
+  // Método para actualizar la caché
+  void _updateTasksCache() {
+    _tasksByStatus.clear();
+    for (var task in tasks) {
+      _tasksByStatus.putIfAbsent(task.status, () => []).add(task);
+    }
+  }
+
+  void _startOperationTimer(String operation) {
+    _operationTimers[operation] = Stopwatch()..start();
+  }
+
+  void _stopOperationTimer(String operation) {
+    final timer = _operationTimers[operation];
+    if (timer != null) {
+      timer.stop();
+      _operationTimes
+          .putIfAbsent(operation, () => [])
+          .add(timer.elapsedMilliseconds);
+      print('$operation took ${timer.elapsedMilliseconds}ms');
+      _operationTimers.remove(operation);
+    }
+  }
+
   Future<void> _updateTaskStatus(KanbanTask task, String newStatus) async {
+    _startOperationTimer('move_task');
     String backendStatus = _toBackendStatus(newStatus);
     String backendPriority = task.priority == 3
         ? 'high'
@@ -456,11 +489,25 @@ class _KanbanViewState extends State<KanbanView> {
         status: backendStatus,
         userId: userId,
       );
-      // Refresh list after status change
-      if (_kanbanId != null) {
-        await _fetchKanbanTasks(_kanbanId!);
-      }
+
+      setState(() {
+        tasks.removeWhere((t) => t.id == task.id);
+        final updatedTask = KanbanTask(
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: newStatus,
+          createdAt: task.createdAt,
+          dueDate: task.dueDate,
+          subject: task.subject,
+          priority: task.priority,
+        );
+        tasks.add(updatedTask);
+        _updateTasksCache();
+      });
+      _stopOperationTimer('move_task');
     } catch (e) {
+      _stopOperationTimer('move_task');
       _scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(content: Text('Error updating status: $e')),
       );
@@ -562,6 +609,7 @@ class _KanbanViewState extends State<KanbanView> {
           TextButton(
             onPressed: () async {
               if (_formKey.currentState?.validate() ?? false) {
+                final stopwatch = Stopwatch()..start();
                 String backendPriority = _selectedPriority == 3
                     ? 'high'
                     : _selectedPriority == 2
@@ -586,15 +634,36 @@ class _KanbanViewState extends State<KanbanView> {
                     status: backendStatus,
                     userId: userId,
                   );
-                  // Refresh list after edit
-                  if (_kanbanId != null) {
-                    await _fetchKanbanTasks(_kanbanId!);
-                  }
+                  // Optimización: Actualizar solo la tarea localmente
+                  setState(() {
+                    tasks.removeWhere((t) => t.id == task.id);
+                    final updatedTask = KanbanTask(
+                      id: task.id,
+                      title: _titleController.text,
+                      description: _descriptionController.text,
+                      status: task.status,
+                      createdAt: task.createdAt,
+                      dueDate: dueDateTime,
+                      subject: _subjectController.text,
+                      priority: _selectedPriority,
+                    );
+                    tasks.add(updatedTask);
+                    _updateTasksCache();
+                  });
                 } catch (e) {
                   _scaffoldMessengerKey.currentState?.showSnackBar(
                     SnackBar(content: Text('Error updating task: $e')),
                   );
                 }
+                stopwatch.stop();
+                final elapsedMs = stopwatch.elapsedMilliseconds;
+                _operationTimes
+                    .putIfAbsent('edit_task', () => [])
+                    .add(elapsedMs);
+                print('Edit task took ${elapsedMs}ms');
+                _scaffoldMessengerKey.currentState?.showSnackBar(
+                  SnackBar(content: Text('Editar tarea tomó ${elapsedMs}ms')),
+                );
                 _titleController.clear();
                 _descriptionController.clear();
                 _subjectController.clear();
@@ -612,16 +681,20 @@ class _KanbanViewState extends State<KanbanView> {
   }
 
   Future<void> _deleteTask(KanbanTask task) async {
+    _startOperationTimer('delete_task');
     try {
       if (_kanbanId != null) {
         await _apiService.removeTaskFromKanban(_kanbanId!, task.id);
       }
       await _apiService.deleteKanbanTaskOnBackend(task.id);
-      // Refresh list after delete
-      if (_kanbanId != null) {
-        await _fetchKanbanTasks(_kanbanId!);
-      }
+
+      setState(() {
+        tasks.removeWhere((t) => t.id == task.id);
+        _updateTasksCache();
+      });
+      _stopOperationTimer('delete_task');
     } catch (e) {
+      _stopOperationTimer('delete_task');
       _scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(content: Text('Error deleting task: $e')),
       );
@@ -764,6 +837,11 @@ class _KanbanViewState extends State<KanbanView> {
               onPressed: _showTaskSummaryDialog,
               tooltip: 'Mostrar Resumen de Tareas',
             ),
+            IconButton(
+              icon: const Icon(Icons.speed),
+              onPressed: _showPerformanceStats,
+              tooltip: 'Mostrar Estadísticas de Rendimiento',
+            ),
           ],
         ),
         body: (_kanbanId == null && !_isOffline)
@@ -828,7 +906,7 @@ class _KanbanViewState extends State<KanbanView> {
   }
 
   Widget _buildColumn(String title, String status, {bool showHeader = false}) {
-    final columnTasks = tasks.where((task) => task.status == status).toList();
+    final columnTasks = _tasksByStatus[status] ?? [];
     return Card(
       margin: const EdgeInsets.all(8),
       child: Column(
@@ -853,59 +931,64 @@ class _KanbanViewState extends State<KanbanView> {
                     itemCount: columnTasks.length,
                     itemBuilder: (context, index) {
                       final task = columnTasks[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 4, horizontal: 8),
-                        color: _getPriorityColor(task.priority),
-                        child: ListTile(
-                          title: Text(
-                            task.title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: _isHorizontalView ? 14 : 16,
-                              overflow: TextOverflow.ellipsis,
+                      return RepaintBoundary(
+                        child: Card(
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 4, horizontal: 8),
+                          color: _getPriorityColor(task.priority),
+                          child: ListTile(
+                            title: Text(
+                              task.title,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: _isHorizontalView ? 14 : 16,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              maxLines: 1,
                             ),
-                            maxLines: 1,
+                            onTap: () => _showTaskDetails(task),
+                            trailing: !_isHorizontalView
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, size: 20),
+                                        onPressed: () => _editTask(task),
+                                      ),
+                                      IconButton(
+                                        icon:
+                                            const Icon(Icons.delete, size: 20),
+                                        onPressed: () async =>
+                                            await _deleteTask(task),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.arrow_back,
+                                            size: 20),
+                                        onPressed: status != 'todo'
+                                            ? () async =>
+                                                await _updateTaskStatus(
+                                                    task,
+                                                    _statuses[_statuses
+                                                            .indexOf(status) -
+                                                        1])
+                                            : null,
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.arrow_forward,
+                                            size: 20),
+                                        onPressed: status != 'done'
+                                            ? () async =>
+                                                await _updateTaskStatus(
+                                                    task,
+                                                    _statuses[_statuses
+                                                            .indexOf(status) +
+                                                        1])
+                                            : null,
+                                      ),
+                                    ],
+                                  )
+                                : null,
                           ),
-                          onTap: () => _showTaskDetails(task),
-                          trailing: !_isHorizontalView
-                              ? Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, size: 20),
-                                      onPressed: () => _editTask(task),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, size: 20),
-                                      onPressed: () async =>
-                                          await _deleteTask(task),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.arrow_back,
-                                          size: 20),
-                                      onPressed: status != 'todo'
-                                          ? () async => await _updateTaskStatus(
-                                              task,
-                                              _statuses[
-                                                  _statuses.indexOf(status) -
-                                                      1])
-                                          : null,
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.arrow_forward,
-                                          size: 20),
-                                      onPressed: status != 'done'
-                                          ? () async => await _updateTaskStatus(
-                                              task,
-                                              _statuses[
-                                                  _statuses.indexOf(status) +
-                                                      1])
-                                          : null,
-                                    ),
-                                  ],
-                                )
-                              : null,
                         ),
                       );
                     },
@@ -917,6 +1000,7 @@ class _KanbanViewState extends State<KanbanView> {
   }
 
   void _showTaskSummaryDialog() {
+    final stopwatch = Stopwatch()..start();
     final int todoCount = tasks.where((t) => t.status == 'todo').length;
     final int inProgressCount =
         tasks.where((t) => t.status == 'in_progress').length;
@@ -926,6 +1010,13 @@ class _KanbanViewState extends State<KanbanView> {
     final int lowPriorityCount = tasks.where((t) => t.priority == 1).length;
     final int mediumPriorityCount = tasks.where((t) => t.priority == 2).length;
     final int highPriorityCount = tasks.where((t) => t.priority == 3).length;
+
+    stopwatch.stop();
+    final elapsedMs = stopwatch.elapsedMilliseconds;
+    print('Task summary calculation took ${elapsedMs}ms');
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(content: Text('Resumen de tareas calculado en ${elapsedMs}ms')),
+    );
 
     showDialog(
       context: context,
@@ -1010,6 +1101,43 @@ class _KanbanViewState extends State<KanbanView> {
           ),
         ),
       ],
+    );
+  }
+
+  // Añadir método para mostrar estadísticas
+  void _showPerformanceStats() {
+    final stats = StringBuffer();
+    stats.writeln('Performance Statistics:');
+    stats.writeln('---------------------');
+
+    _operationTimes.forEach((operation, times) {
+      if (times.isNotEmpty) {
+        final avg = times.reduce((a, b) => a + b) / times.length;
+        final min = times.reduce((a, b) => a < b ? a : b);
+        final max = times.reduce((a, b) => a > b ? a : b);
+        stats.writeln('$operation:');
+        stats.writeln('  Average: ${avg.toStringAsFixed(2)}ms');
+        stats.writeln('  Min: ${min}ms');
+        stats.writeln('  Max: ${max}ms');
+        stats.writeln('  Samples: ${times.length}');
+        stats.writeln('---------------------');
+      }
+    });
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Performance Statistics'),
+        content: SingleChildScrollView(
+          child: Text(stats.toString()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 }
