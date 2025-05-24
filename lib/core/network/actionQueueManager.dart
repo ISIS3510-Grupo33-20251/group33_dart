@@ -176,8 +176,15 @@ class ActionQueueManager {
       print('borrados');
       await apiServiceAdapter.uploadSavedData(
           await _localStorage.loadCalcData(), userId);
+    } else if (action == 'reminder create') {
+      final reminderJson = await _localStorage.getReminder(id);
+      await apiServiceAdapter.createReminderFromJson(reminderJson);
+      print('creados');
+    } else if (action == 'reminder update') {
+      final reminderJson = await _localStorage.getReminder(id);
+      await apiServiceAdapter.updateReminderFromJson(id, reminderJson);
+      print('creados');
     }
-    print('creados');
   }
 
   /// Clean up timer

@@ -140,6 +140,42 @@ class LocalStorageService {
     await saveClasses(classes);
   }
 
+  Future<void> saveReminders(List<Map<String, dynamic>> reminders) async {
+    final box = await Hive.openBox('reminders');
+    await box.put('reminders', reminders);
+  }
+
+  Future<List<Map<String, dynamic>>> loadReminders() async {
+    final box = await Hive.openBox('reminders');
+    final data = box.get('reminders');
+    if (data == null || data is! List) return [];
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> getReminder(String id) async {
+    final box = await Hive.openBox('reminders');
+    final List<dynamic> reminders = box.get('reminders') ?? [];
+    final reminder = reminders
+        .cast<Map<String, dynamic>>()
+        .firstWhere((e) => e['_id'] == id, orElse: () => throw Exception('Reminder with ID $id not found'));
+    return reminder;
+  }
+
+  Future<void> updateReminder(Map<String, dynamic> updatedReminder) async {
+    final box = await Hive.openBox('reminders');
+    final List<dynamic> reminders = box.get('reminders') ?? [];
+
+    final index = reminders.indexWhere((r) => r['_id'] == updatedReminder['_id']);
+
+    if (index != -1) {
+      reminders[index] = updatedReminder;
+    } else {
+      reminders.add(updatedReminder); // fallback
+    }
+
+    await box.put('reminders', reminders);
+  }
+
   Future<List<String>> loadCalcSubjects() async {
     await ensureBoxIsOpen();
     final raw = _box.get(_calculatorSubjectKey);
