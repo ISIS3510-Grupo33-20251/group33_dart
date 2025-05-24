@@ -9,6 +9,8 @@ class LocalStorageService {
   static const String _friendsKey = 'cached_friends';
   static const String _classesKey = 'cached_classes';
   static const String _scheduleIdKey = 'schedule_id';
+  static const String _calculatorSubjectKey = 'cached_calculator_subjects';
+  static const String _calculatorData = 'cached_calculator_data';
 
   Box get _box => Hive.box('storage');
 
@@ -136,5 +138,43 @@ class LocalStorageService {
     final classes = await loadClasses();
     classes.removeWhere((c) => c.id == classId);
     await saveClasses(classes);
+  }
+
+  Future<List<String>> loadCalcSubjects() async {
+    await ensureBoxIsOpen();
+    final raw = _box.get(_calculatorSubjectKey);
+    if (raw == null) return [];
+    final List<dynamic> decoded = jsonDecode(raw);
+    return decoded.map((e) => e as String).toList();
+  }
+
+  Future<void> addCalcSubjects(List<String> subjects) async {
+    final jsonQueue = jsonEncode(subjects);
+    await _box.put(_calculatorSubjectKey, jsonQueue);
+    await _box.flush();
+  }
+
+  Future<void> addCalcData(Map<String, List<Map<String, String>>> data) async {
+    await _box.put(_calculatorData, data);
+    await _box.flush();
+  }
+
+  Future<Map<String, List<Map<String, String>>>> loadCalcData() async {
+    final raw = _box.get(_calculatorData);
+    if (raw == null) return {};
+
+    final Map<String, dynamic> rawMap = Map<String, dynamic>.from(raw);
+    final loaded = rawMap.map(
+      (key, value) => MapEntry(
+        key,
+        List<Map<String, String>>.from(
+          (value as List).map(
+            (item) => Map<String, String>.from(item as Map),
+          ),
+        ),
+      ),
+    );
+
+    return loaded;
   }
 }

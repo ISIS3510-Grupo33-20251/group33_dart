@@ -689,6 +689,81 @@ class ApiServiceAdapter {
       throw Exception('Failed to get kanban tasks: ${response.body}');
     }
   }
+
+  Future<Map<String, List<Map<String, String>>>> getCalcInfo(
+      String userId) async {
+    final response = await http.get(
+      Uri.parse('$backendUrl/calculator/user/$userId'),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> datos = jsonDecode(response.body);
+      final Map<String, List<Map<String, String>>> datosConvertidos = {};
+
+      for (var item in datos) {
+        final String nombreMateria = item['subject_name'];
+        final List<Map<String, String>> entradas = [];
+
+        for (var entrada in item['entries']) {
+          entradas.add({
+            'name': entrada['name'].toString(),
+            'grade': entrada['grade'].toString(),
+            'percent': entrada['percentage'].toString(),
+          });
+        }
+
+        datosConvertidos[nombreMateria] = entradas;
+      }
+
+      return datosConvertidos;
+    } else {
+      throw Exception('Failed to fetch calculator info: ${response.body}');
+    }
+  }
+
+  Future<void> deleteAllCalcInfo(String userId) async {
+    final url = Uri.parse('$backendUrl/calculator/user/$userId');
+
+    await http.delete(url);
+  }
+
+  Future<void> updateAllCalcInfo(String userId) async {
+    final url = Uri.parse('$backendUrl/calculator/user/$userId');
+
+    await http.delete(url);
+  }
+
+  Future<void> uploadSavedData(
+    Map<String, List<Map<String, String>>> savedData,
+    String ownerId,
+  ) async {
+    final url = Uri.parse('$backendUrl/calculator/');
+
+    for (final entry in savedData.entries) {
+      final subjectName = entry.key;
+      final rawEntries = entry.value;
+
+      final formattedEntries = rawEntries.map((e) {
+        return {
+          'name': e['name'],
+          'percentage': double.tryParse(e['percent'] ?? '0') ?? 0.0,
+          'grade': double.tryParse(e['grade'] ?? '0') ?? 0.0,
+        };
+      }).toList();
+
+      final subjectData = {
+        'subject_name': subjectName,
+        'owner_id': ownerId,
+        'entries': formattedEntries,
+      };
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(subjectData),
+      );
+    }
+  }
 }
 
 Future<bool> hasInternetConnection() async {
