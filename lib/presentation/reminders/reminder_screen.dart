@@ -231,7 +231,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    r.entityId,
+                                    r.notes?.isNotEmpty == true ? r.notes! : 'Reminder',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -242,6 +242,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
                                   const Icon(Icons.sync_problem, color: Colors.orange, size: 18),
                               ],
                             ),
+
                             subtitle: Text(
                               DateFormat('EEE, MMM d • hh:mm a').format(r.remindAt),
                               style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
