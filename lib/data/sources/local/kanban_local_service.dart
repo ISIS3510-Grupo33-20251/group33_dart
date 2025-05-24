@@ -45,7 +45,17 @@ class KanbanLocalService {
     final box = Hive.box(_queueBox);
     final raw = box.get('queue');
     if (raw == null) return [];
-    return List<Map<String, dynamic>>.from(raw);
+
+    // Manejo seguro de tipos para evitar errores de casting
+    if (raw is List) {
+      return raw.map((item) {
+        if (item is Map) {
+          return Map<String, dynamic>.from(item);
+        }
+        return <String, dynamic>{};
+      }).toList();
+    }
+    return [];
   }
 
   Future<void> clearActionQueue() async {

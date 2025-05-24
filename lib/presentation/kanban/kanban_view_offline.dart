@@ -54,8 +54,18 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
   @override
   void initState() {
     super.initState();
-    _loadLocalKanban();
     _initConnectivityListener();
+    _checkAndSetInitialConnectivity();
+    _loadLocalKanban();
+  }
+
+  Future<void> _checkAndSetInitialConnectivity() async {
+    final result = await _connectivity.checkConnectivity();
+    setState(() {
+      _isOffline = result == ConnectivityResult.none;
+      print(
+          'KanbanViewOffline: Initial connectivity check result: _isOffline=$_isOffline');
+    });
   }
 
   Future<void> _loadLocalKanban() async {
@@ -88,13 +98,14 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
       if (offline != _isOffline) {
         setState(() {
           _isOffline = offline;
+          print(
+              'KanbanViewOffline: Connectivity changed: _isOffline=$_isOffline');
         });
-        if (offline) {
-          _showOfflineBanner();
-        } else {
+        if (!offline) {
           _hideOfflineBanner();
-          // On reconnect, try to sync the queue
           await _processSyncQueue();
+        } else {
+          _showOfflineBanner();
         }
       }
     });
@@ -463,7 +474,11 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
   }
 
   Future<void> _updateTaskStatus(KanbanTask task, String newStatus) async {
+    print(
+        'KanbanViewOffline _updateTaskStatus: _isOffline=$_isOffline, changing task ${task.id} from ${task.status} to $newStatus');
     if (_isOffline) {
+      print(
+          'KanbanViewOffline _updateTaskStatus: Starting offline status update');
       // Actualizar localmente y agregar a la cola
       final updatedTask = task.copyWith(status: newStatus);
       final tasksLocal = await _localService.loadTasks();
@@ -512,6 +527,8 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
   }
 
   Future<void> _editTask(KanbanTask task) async {
+    print(
+        'KanbanViewOffline _editTask: _isOffline=$_isOffline for task ${task.id}');
     _titleController.text = task.title;
     _descriptionController.text = task.description;
     _subjectController.text = task.subject ?? '';
@@ -606,7 +623,11 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
           TextButton(
             onPressed: () async {
               if (_formKey.currentState?.validate() ?? false) {
+                print(
+                    'KanbanViewOffline _editTask Save: _isOffline=$_isOffline');
                 if (_isOffline) {
+                  print(
+                      'KanbanViewOffline _editTask: Starting offline edit for task ${task.id}');
                   final dueDateTime = DateTime(
                     _selectedDueDate!.year,
                     _selectedDueDate!.month,
@@ -696,20 +717,42 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
   }
 
   Future<void> _deleteTask(KanbanTask task) async {
+    print('KanbanViewOffline _deleteTask: _isOffline=$_isOffline');
     if (_isOffline) {
+      print(
+          'KanbanViewOffline _deleteTask: Starting offline delete for task ${task.id}');
+
       final tasksLocal = await _localService.loadTasks();
+      print(
+          'KanbanViewOffline _deleteTask: Loaded ${tasksLocal.length} local tasks');
+
       tasksLocal.removeWhere((t) => t.id == task.id);
+      print(
+          'KanbanViewOffline _deleteTask: After removal, ${tasksLocal.length} tasks remain');
+
       await _localService.saveTasks(tasksLocal);
+      print('KanbanViewOffline _deleteTask: Saved updated tasks locally');
+
       // Agregar a la cola de acciones
       final queue = await _localService.loadActionQueue();
+      print(
+          'KanbanViewOffline _deleteTask: Loaded action queue with ${queue.length} items');
+
       queue.add({
         'action': 'delete',
         'task': task.toJson(),
       });
+      print('KanbanViewOffline _deleteTask: Added delete action to queue');
+
       await _localService.saveActionQueue(queue);
+      print(
+          'KanbanViewOffline _deleteTask: Saved action queue with ${queue.length} items');
+
       setState(() {
         tasks = tasksLocal;
       });
+      print(
+          'KanbanViewOffline _deleteTask: Updated widget state with ${tasks.length} tasks');
       return;
     }
     try {
@@ -769,11 +812,17 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
         actions: [
           if (_isHorizontalView) ...[
             TextButton(
-              onPressed: () => _editTask(task),
+              onPressed: () {
+                print(
+                    'KanbanViewOffline: Edit button pressed in details dialog for task ${task.id}');
+                _editTask(task);
+              },
               child: const Text('Editar'),
             ),
             TextButton(
               onPressed: () async {
+                print(
+                    'KanbanViewOffline: Delete button pressed in details dialog for task ${task.id}');
                 await _deleteTask(task);
                 Navigator.of(context).pop();
               },
@@ -983,12 +1032,19 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
                                   children: [
                                     IconButton(
                                       icon: const Icon(Icons.edit, size: 20),
-                                      onPressed: () => _editTask(task),
+                                      onPressed: () {
+                                        print(
+                                            'KanbanViewOffline: Edit button pressed for task ${task.id}');
+                                        _editTask(task);
+                                      },
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete, size: 20),
-                                      onPressed: () async =>
-                                          await _deleteTask(task),
+                                      onPressed: () async {
+                                        print(
+                                            'KanbanViewOffline: Delete button pressed for task ${task.id}');
+                                        await _deleteTask(task);
+                                      },
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.arrow_back,

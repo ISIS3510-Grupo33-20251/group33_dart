@@ -818,28 +818,16 @@ class _KanbanViewState extends State<KanbanView> {
 
   @override
   Widget build(BuildContext context) {
+    print('KanbanView build: _isOffline=$_isOffline, _kanbanId=$_kanbanId');
     if (_isOffline == null) {
+      print('KanbanView: Loading state');
       return const Center(child: CircularProgressIndicator());
     }
     if (_isOffline!) {
-      // Solo muestra un mensaje claro
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Kanban Board'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: const Center(
-          child: Text(
-            'No internet connection.\nConnect to use the Kanban board.',
-            style: TextStyle(fontSize: 20, color: Colors.redAccent),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
+      print('KanbanView: Offline, showing KanbanViewOffline');
+      return const KanbanViewOffline();
     } else {
+      print('KanbanView: Online, showing KanbanViewOnline');
       return KanbanViewOnline();
     }
   }
