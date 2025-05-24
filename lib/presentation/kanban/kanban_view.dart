@@ -801,7 +801,23 @@ class _KanbanViewState extends State<KanbanView> {
           await _apiService.deleteKanbanTaskOnBackend(taskId);
           anySynced = true;
         }
-        // Puedes agregar lógica para 'edit' si la implementas
+        if (action['action'] == 'edit') {
+          final taskJson = action['task'] as Map<String, dynamic>;
+          await _apiService.updateKanbanTaskOnBackend(
+            id: taskJson['id'],
+            title: taskJson['title'],
+            description: taskJson['description'],
+            dueDate: DateTime.parse(taskJson['dueDate']),
+            priority: taskJson['priority'] == 3
+                ? 'high'
+                : taskJson['priority'] == 2
+                    ? 'medium'
+                    : 'low',
+            status: taskJson['status'],
+            userId: userId,
+          );
+          anySynced = true;
+        }
         queue.remove(action);
         await _localService.saveActionQueue(queue);
       } catch (_) {
@@ -813,10 +829,6 @@ class _KanbanViewState extends State<KanbanView> {
       _scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(content: Text('Changes synced with the server.')),
       );
-    }
-    final tasksLocal = await _localService.loadTasks();
-    if (tasksLocal.isNotEmpty) {
-      await _localService.saveTasks([]);
     }
   }
 
@@ -1638,7 +1650,23 @@ class _KanbanViewOnlineState extends State<KanbanViewOnline> {
           await _apiService.deleteKanbanTaskOnBackend(taskId);
           anySynced = true;
         }
-        // Puedes agregar lógica para 'edit' si la implementas
+        if (action['action'] == 'edit') {
+          final taskJson = action['task'] as Map<String, dynamic>;
+          await _apiService.updateKanbanTaskOnBackend(
+            id: taskJson['id'],
+            title: taskJson['title'],
+            description: taskJson['description'],
+            dueDate: DateTime.parse(taskJson['dueDate']),
+            priority: taskJson['priority'] == 3
+                ? 'high'
+                : taskJson['priority'] == 2
+                    ? 'medium'
+                    : 'low',
+            status: taskJson['status'],
+            userId: userId,
+          );
+          anySynced = true;
+        }
         queue.remove(action);
         await _localService.saveActionQueue(queue);
       } catch (_) {
@@ -1650,10 +1678,6 @@ class _KanbanViewOnlineState extends State<KanbanViewOnline> {
       _scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(content: Text('Changes synced with the server.')),
       );
-    }
-    final tasksLocal = await _localService.loadTasks();
-    if (tasksLocal.isNotEmpty) {
-      await _localService.saveTasks([]);
     }
   }
 

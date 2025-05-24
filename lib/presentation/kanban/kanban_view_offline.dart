@@ -112,26 +112,20 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
   }
 
   void _showOfflineBanner() {
-    _scaffoldMessengerKey.currentState?.clearMaterialBanners();
-    _scaffoldMessengerKey.currentState?.showMaterialBanner(
-      MaterialBanner(
-        content: const Text(
-          'You are offline. Changes will sync when you are back online.',
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Offline mode: Changes will sync when you are back online.',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.deepOrange,
-        actions: [
-          TextButton(
-            onPressed: () => _hideOfflineBanner(),
-            child: const Text('OK', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+        duration: Duration(seconds: 5),
       ),
     );
   }
 
   void _hideOfflineBanner() {
-    _scaffoldMessengerKey.currentState?.clearMaterialBanners();
+    _scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
   }
 
   Future<void> _fetchKanbanId() async {
@@ -868,7 +862,23 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
           await _apiService.deleteKanbanTaskOnBackend(taskId);
           anySynced = true;
         }
-        // Puedes agregar lógica para 'edit' si la implementas
+        if (action['action'] == 'edit') {
+          final taskJson = action['task'] as Map<String, dynamic>;
+          await _apiService.updateKanbanTaskOnBackend(
+            id: taskJson['id'],
+            title: taskJson['title'],
+            description: taskJson['description'],
+            dueDate: DateTime.parse(taskJson['dueDate']),
+            priority: taskJson['priority'] == 3
+                ? 'high'
+                : taskJson['priority'] == 2
+                    ? 'medium'
+                    : 'low',
+            status: taskJson['status'],
+            userId: userId,
+          );
+          anySynced = true;
+        }
         queue.remove(action);
         await _localService.saveActionQueue(queue);
       } catch (_) {
@@ -880,10 +890,6 @@ class _KanbanViewOfflineState extends State<KanbanViewOffline> {
       _scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(content: Text('Changes synced with the server.')),
       );
-    }
-    final tasksLocal = await _localService.loadTasks();
-    if (tasksLocal.isNotEmpty) {
-      await _localService.saveTasks([]);
     }
   }
 
