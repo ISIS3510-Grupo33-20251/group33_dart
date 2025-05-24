@@ -779,7 +779,6 @@ class _KanbanViewState extends State<KanbanView> {
       try {
         if (action['action'] == 'add') {
           final taskJson = action['task'] as Map<String, dynamic>;
-          // Create in backend
           final backendTask = await _apiService.createKanbanTaskOnBackend(
             title: taskJson['title'],
             description: taskJson['description'],
@@ -795,11 +794,17 @@ class _KanbanViewState extends State<KanbanView> {
           await _apiService.addTaskToKanban(_kanbanId!, backendTask['_id']);
           anySynced = true;
         }
-        // TODO: handle edit, delete, move actions if needed
+        if (action['action'] == 'delete') {
+          final taskJson = action['task'] as Map<String, dynamic>;
+          final taskId = taskJson['id'];
+          await _apiService.removeTaskFromKanban(_kanbanId!, taskId);
+          await _apiService.deleteKanbanTaskOnBackend(taskId);
+          anySynced = true;
+        }
+        // Puedes agregar lógica para 'edit' si la implementas
         queue.remove(action);
         await _localService.saveActionQueue(queue);
       } catch (_) {
-        // If any action fails, keep it in the queue for next time
         continue;
       }
     }
@@ -809,7 +814,6 @@ class _KanbanViewState extends State<KanbanView> {
         const SnackBar(content: Text('Changes synced with the server.')),
       );
     }
-    // Clean up local-only tasks if needed
     final tasksLocal = await _localService.loadTasks();
     if (tasksLocal.isNotEmpty) {
       await _localService.saveTasks([]);
@@ -1612,7 +1616,6 @@ class _KanbanViewOnlineState extends State<KanbanViewOnline> {
       try {
         if (action['action'] == 'add') {
           final taskJson = action['task'] as Map<String, dynamic>;
-          // Create in backend
           final backendTask = await _apiService.createKanbanTaskOnBackend(
             title: taskJson['title'],
             description: taskJson['description'],
@@ -1628,11 +1631,17 @@ class _KanbanViewOnlineState extends State<KanbanViewOnline> {
           await _apiService.addTaskToKanban(_kanbanId!, backendTask['_id']);
           anySynced = true;
         }
-        // TODO: handle edit, delete, move actions if needed
+        if (action['action'] == 'delete') {
+          final taskJson = action['task'] as Map<String, dynamic>;
+          final taskId = taskJson['id'];
+          await _apiService.removeTaskFromKanban(_kanbanId!, taskId);
+          await _apiService.deleteKanbanTaskOnBackend(taskId);
+          anySynced = true;
+        }
+        // Puedes agregar lógica para 'edit' si la implementas
         queue.remove(action);
         await _localService.saveActionQueue(queue);
       } catch (_) {
-        // If any action fails, keep it in the queue for next time
         continue;
       }
     }
@@ -1642,7 +1651,6 @@ class _KanbanViewOnlineState extends State<KanbanViewOnline> {
         const SnackBar(content: Text('Changes synced with the server.')),
       );
     }
-    // Clean up local-only tasks if needed
     final tasksLocal = await _localService.loadTasks();
     if (tasksLocal.isNotEmpty) {
       await _localService.saveTasks([]);
