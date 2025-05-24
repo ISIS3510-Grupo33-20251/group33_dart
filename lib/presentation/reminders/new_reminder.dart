@@ -36,6 +36,7 @@ class _NewReminderFormState extends State<NewReminderForm> {
   void initState() {
     super.initState();
     if (widget.existingReminder != null) {
+      _titleCtrl.text = widget.existingReminder!.entityId;
       _notesCtrl.text = widget.existingReminder!.notes ?? '';
       _selectedDate = widget.existingReminder!.remindAt;
     }
@@ -131,6 +132,7 @@ class _NewReminderFormState extends State<NewReminderForm> {
     id: widget.existingReminder?.id ?? const Uuid().v4(),
     userId: widget.userId,
     entityType: 'task',
+    entityId: _titleCtrl.text.trim(),
     remindAt: _selectedDate!,
     status: widget.existingReminder?.status ?? 'pending',
     notes: _notesCtrl.text.trim(),
@@ -151,7 +153,7 @@ class _NewReminderFormState extends State<NewReminderForm> {
     try {
       if (isEditing) {
         await widget.api.updateReminder(reminder);
-        await LocalStorageService().updateReminder(reminder.toJson()); // ✅ GUARDAR LOCALMENTE
+        await LocalStorageService().updateReminder(reminder.toJson()); 
       } else {
         await widget.api.createReminder(reminder);
       }

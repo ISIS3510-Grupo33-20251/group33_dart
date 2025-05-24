@@ -144,38 +144,52 @@ class LocalStorageService {
     final box = await Hive.openBox('reminders');
     await box.put('reminders', reminders);
   }
-
-  Future<List<Map<String, dynamic>>> loadReminders() async {
+Future<List<Map<String, dynamic>>> loadReminders() async {
     final box = await Hive.openBox('reminders');
     final data = box.get('reminders');
     if (data == null || data is! List) return [];
-    return data.cast<Map<String, dynamic>>();
+
+    return (data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
 
+  
   Future<Map<String, dynamic>> getReminder(String id) async {
     final box = await Hive.openBox('reminders');
-    final List<dynamic> reminders = box.get('reminders') ?? [];
-    final reminder = reminders
-        .cast<Map<String, dynamic>>()
-        .firstWhere((e) => e['_id'] == id, orElse: () => throw Exception('Reminder with ID $id not found'));
-    return reminder;
+    final data = box.get('reminders');
+    if (data == null || data is! List) {
+      throw Exception('No reminders stored');
+    }
+    final remindersList = (data as List)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    return remindersList.firstWhere(
+      (e) => e['_id'] == id,
+      orElse: () => throw Exception('Reminder with ID $id not found'),
+    );
   }
 
   Future<void> updateReminder(Map<String, dynamic> updatedReminder) async {
     final box = await Hive.openBox('reminders');
-    final List<dynamic> reminders = box.get('reminders') ?? [];
+    final data = box.get('reminders');
+    final remindersList = <Map<String, dynamic>>[];
 
-    final index = reminders.indexWhere((r) => r['_id'] == updatedReminder['_id']);
-
-    if (index != -1) {
-      reminders[index] = updatedReminder;
-    } else {
-      reminders.add(updatedReminder); // fallback
+    if (data is List) {
+      remindersList.addAll(
+        data.map((e) => Map<String, dynamic>.from(e as Map)),
+      );
     }
 
-    await box.put('reminders', reminders);
-  }
+    final index = remindersList.indexWhere((r) => r['_id'] == updatedReminder['_id']);
+    if (index != -1) {
+      remindersList[index] = updatedReminder;
+    } else {
+      remindersList.add(updatedReminder);
+    }
 
+    await box.put('reminders', remindersList);
+  }
   Future<List<String>> loadCalcSubjects() async {
     await ensureBoxIsOpen();
     final raw = _box.get(_calculatorSubjectKey);

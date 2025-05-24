@@ -4,7 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import '../../domain/models/reminder.dart';
 import '../../services/api_service_adapter.dart';
-import "new_reminder.dart";
+import 'new_reminder.dart';
 import 'package:group33_dart/data/sources/local/local_storage_service.dart';
 import 'package:group33_dart/services/connectivity_service.dart';
 
@@ -49,7 +49,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
       await _fetchReminders();
     } catch (e) {
       setState(() {
-        error = 'Error loading reminders: \$e';
+        error = 'Error loading reminders: $e';
         isLoading = false;
       });
     }
@@ -58,7 +58,12 @@ class _ReminderScreenState extends State<ReminderScreen> {
   Future<void> _loadRemindersFromCache() async {
     final cached = await localStorage.loadReminders();
     setState(() {
-      reminders = cached.map((json) => Reminder.fromJson(json)).toList();
+      reminders = cached.map((json) {
+        final Map<String, dynamic> m = json is Map<String, dynamic>
+            ? json
+            : Map<String, dynamic>.from(json);
+        return Reminder.fromJson(m);
+      }).toList();
       isLoading = false;
     });
   }
@@ -73,14 +78,20 @@ class _ReminderScreenState extends State<ReminderScreen> {
       final merged = [...synced, ...unsynced];
 
       await localStorage.saveReminders(merged);
+
       setState(() {
-        reminders = merged.map(Reminder.fromJson).toList();
+        reminders = merged.map((e) {
+          final Map<String, dynamic> m = e is Map<String, dynamic>
+              ? e
+              : Map<String, dynamic>.from(e);
+          return Reminder.fromJson(m);
+        }).toList();
         isLoading = false;
         error = '';
       });
     } catch (e) {
       setState(() {
-        error = 'Failed to fetch reminders from server.';
+        error = 'Failed to fetch reminders from server: $e';
         isLoading = false;
       });
     }
@@ -231,7 +242,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    r.notes?.isNotEmpty == true ? r.notes! : 'Reminder',
+                                    r.entityId,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -242,7 +253,6 @@ class _ReminderScreenState extends State<ReminderScreen> {
                                   const Icon(Icons.sync_problem, color: Colors.orange, size: 18),
                               ],
                             ),
-
                             subtitle: Text(
                               DateFormat('EEE, MMM d • hh:mm a').format(r.remindAt),
                               style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
