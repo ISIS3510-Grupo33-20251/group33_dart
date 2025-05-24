@@ -4,6 +4,7 @@ import '../../../models/kanban_task.dart';
 class KanbanLocalService {
   static const String _tasksBox = 'kanban_tasks';
   static const String _queueBox = 'kanban_action_queue';
+  static const String _kanbanIdBox = 'kanban_id';
 
   Future<void> ensureBoxesOpen() async {
     if (!Hive.isBoxOpen(_tasksBox)) {
@@ -44,12 +45,34 @@ class KanbanLocalService {
     final box = Hive.box(_queueBox);
     final raw = box.get('queue');
     if (raw == null) return [];
-    return List<Map<String, dynamic>>.from(raw);
+
+    // Manejo seguro de tipos para evitar errores de casting
+    if (raw is List) {
+      return raw.map((item) {
+        if (item is Map) {
+          return Map<String, dynamic>.from(item);
+        }
+        return <String, dynamic>{};
+      }).toList();
+    }
+    return [];
   }
 
   Future<void> clearActionQueue() async {
     await ensureBoxesOpen();
     final box = Hive.box(_queueBox);
     await box.delete('queue');
+  }
+
+  Future<void> saveKanbanId(String kanbanId) async {
+    await ensureBoxesOpen();
+    final box = await Hive.openBox(_kanbanIdBox);
+    await box.put('kanban_id', kanbanId);
+  }
+
+  Future<String?> loadKanbanId() async {
+    await ensureBoxesOpen();
+    final box = await Hive.openBox(_kanbanIdBox);
+    return box.get('kanban_id');
   }
 }
