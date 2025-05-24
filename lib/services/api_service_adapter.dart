@@ -706,12 +706,17 @@ Future<void> createReminder(Reminder reminder) async {
 Future<List<Reminder>> getRemindersForUser(String userId) async {
   final url = Uri.parse('$backendUrl/reminders/user/$userId');
   final response = await http.get(url);
+
   if (response.statusCode == 200) {
     final List decoded = jsonDecode(response.body);
     return decoded.map((e) => Reminder.fromJson(e)).toList();
   }
+
   throw Exception('Failed to fetch reminders: ${response.body}');
 }
+
+
+
 
 Future<List<Reminder>> getRemindersForTask(String taskId) async {
   final url = Uri.parse('$backendUrl/reminders/task/$taskId');
