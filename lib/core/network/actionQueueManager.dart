@@ -48,6 +48,7 @@ class ActionQueueManager {
 
   /// Check the internet connection using an isolate
   Future<void> _checkConnection() async {
+    print(await _localStorage.loadActionQueue());
     try {
       final receivePort =
           ReceivePort(); // Puerto para recibir mensajes del Isolate
@@ -103,7 +104,7 @@ class ActionQueueManager {
 
   /// Process the queue: send each action to the server
   Future<void> _processQueue() async {
-    if (_isProcessing) return;
+    if (_isProcessing || userId == '1') return;
     _isProcessing = true;
     try {
       var queue = await _localStorage.loadActionQueue();
@@ -170,15 +171,20 @@ class ActionQueueManager {
       );
     } else if (action == 'note delete') {
       await apiServiceAdapter.deleteNote(id);
+    } else if (action == 'update calc') {
+      await apiServiceAdapter.deleteAllCalcInfo(userId);
+      print('borrados');
+      await apiServiceAdapter.uploadSavedData(
+          await _localStorage.loadCalcData(), userId);
+    } else if (action == 'reminder create') {
+      final reminderJson = await _localStorage.getReminder(id);
+      await apiServiceAdapter.createReminderFromJson(reminderJson);
+      print('creados');
+    } else if (action == 'reminder update') {
+      final reminderJson = await _localStorage.getReminder(id);
+      await apiServiceAdapter.updateReminderFromJson(id, reminderJson);
+      print('creados');
     }
-    else if (action == 'reminder create') {
-  final reminderJson = await _localStorage.getReminder(id);
-  await apiServiceAdapter.createReminderFromJson(reminderJson);
-} else if (action == 'reminder update') {
-  final reminderJson = await _localStorage.getReminder(id);
-  await apiServiceAdapter.updateReminderFromJson(id, reminderJson);
-}
-
   }
 
   /// Clean up timer

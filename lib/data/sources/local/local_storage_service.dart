@@ -9,6 +9,8 @@ class LocalStorageService {
   static const String _friendsKey = 'cached_friends';
   static const String _classesKey = 'cached_classes';
   static const String _scheduleIdKey = 'schedule_id';
+  static const String _calculatorSubjectKey = 'cached_calculator_subjects';
+  static const String _calculatorData = 'cached_calculator_data';
 
   Box get _box => Hive.box('storage');
 
@@ -137,39 +139,78 @@ class LocalStorageService {
     classes.removeWhere((c) => c.id == classId);
     await saveClasses(classes);
   }
+
   Future<void> saveReminders(List<Map<String, dynamic>> reminders) async {
-  final box = await Hive.openBox('reminders');
-  await box.put('reminders', reminders);
-}
-Future<List<Map<String, dynamic>>> loadReminders() async {
-  final box = await Hive.openBox('reminders');
-  final data = box.get('reminders');
-  if (data == null || data is! List) return [];
-  return data.cast<Map<String, dynamic>>();
-}
-Future<Map<String, dynamic>> getReminder(String id) async {
-  final box = await Hive.openBox('reminders');
-  final List<dynamic> reminders = box.get('reminders') ?? [];
-  final reminder = reminders
-    .cast<Map<String, dynamic>>()
-    .firstWhere((e) => e['_id'] == id, orElse: () => throw Exception('Reminder with ID $id not found'));
-return reminder;
-}
-Future<void> updateReminder(Map<String, dynamic> updatedReminder) async {
-  final box = await Hive.openBox('reminders');
-  final List<dynamic> reminders = box.get('reminders') ?? [];
-
-  final index = reminders.indexWhere((r) => r['_id'] == updatedReminder['_id']);
-
-  if (index != -1) {
-    reminders[index] = updatedReminder;
-  } else {
-    reminders.add(updatedReminder); // fallback
+    final box = await Hive.openBox('reminders');
+    await box.put('reminders', reminders);
   }
 
-  await box.put('reminders', reminders);
-}
+  Future<List<Map<String, dynamic>>> loadReminders() async {
+    final box = await Hive.openBox('reminders');
+    final data = box.get('reminders');
+    if (data == null || data is! List) return [];
+    return data.cast<Map<String, dynamic>>();
+  }
 
+  Future<Map<String, dynamic>> getReminder(String id) async {
+    final box = await Hive.openBox('reminders');
+    final List<dynamic> reminders = box.get('reminders') ?? [];
+    final reminder = reminders
+        .cast<Map<String, dynamic>>()
+        .firstWhere((e) => e['_id'] == id, orElse: () => throw Exception('Reminder with ID $id not found'));
+    return reminder;
+  }
 
+  Future<void> updateReminder(Map<String, dynamic> updatedReminder) async {
+    final box = await Hive.openBox('reminders');
+    final List<dynamic> reminders = box.get('reminders') ?? [];
 
+    final index = reminders.indexWhere((r) => r['_id'] == updatedReminder['_id']);
+
+    if (index != -1) {
+      reminders[index] = updatedReminder;
+    } else {
+      reminders.add(updatedReminder); // fallback
+    }
+
+    await box.put('reminders', reminders);
+  }
+
+  Future<List<String>> loadCalcSubjects() async {
+    await ensureBoxIsOpen();
+    final raw = _box.get(_calculatorSubjectKey);
+    if (raw == null) return [];
+    final List<dynamic> decoded = jsonDecode(raw);
+    return decoded.map((e) => e as String).toList();
+  }
+
+  Future<void> addCalcSubjects(List<String> subjects) async {
+    final jsonQueue = jsonEncode(subjects);
+    await _box.put(_calculatorSubjectKey, jsonQueue);
+    await _box.flush();
+  }
+
+  Future<void> addCalcData(Map<String, List<Map<String, String>>> data) async {
+    await _box.put(_calculatorData, data);
+    await _box.flush();
+  }
+
+  Future<Map<String, List<Map<String, String>>>> loadCalcData() async {
+    final raw = _box.get(_calculatorData);
+    if (raw == null) return {};
+
+    final Map<String, dynamic> rawMap = Map<String, dynamic>.from(raw);
+    final loaded = rawMap.map(
+      (key, value) => MapEntry(
+        key,
+        List<Map<String, String>>.from(
+          (value as List).map(
+            (item) => Map<String, String>.from(item as Map),
+          ),
+        ),
+      ),
+    );
+
+    return loaded;
+  }
 }
