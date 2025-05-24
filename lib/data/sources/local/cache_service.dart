@@ -2,12 +2,15 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:group33_dart/presentation/widgets/friends/friend.dart';
+import 'package:group33_dart/domain/models/reminder.dart';
+
 
 
 class CacheService {
   final CacheManager _cache = DefaultCacheManager();
   static const String _lastScheduleUpdateKey = 'last_schedule_update';
   static const String _profileImageKey = 'profile_image_path';
+  static const String _remindersKey = 'cached_reminders';
 
   Future<void> cacheFlashcard(
       String key, List<Map<String, dynamic>> data) async {
@@ -143,5 +146,35 @@ class CacheService {
       print('Error loading cached profile image path: $e');
       return null;
     }
+  }
+
+  Future<void> cacheReminders(List<Reminder> reminders) async {
+    final data = reminders.map((r) => r.toJson()).toList();
+    final jsonString = jsonEncode(data);
+    final bytes = Uint8List.fromList(utf8.encode(jsonString));
+    await _cache.putFile(
+      _remindersKey,
+      bytes,
+      fileExtension: 'json',
+    );
+  }
+
+
+  Future<List<Reminder>> loadCachedReminders() async {
+    final fileInfo = await _cache.getFileFromCache(_remindersKey);
+    if (fileInfo == null) return [];
+    try {
+      final jsonString = await fileInfo.file.readAsString();
+      final List<dynamic> list = jsonDecode(jsonString);
+      return list.map((item) => Reminder.fromJson(Map<String, dynamic>.from(item))).toList();
+    } catch (e) {
+      print('Error parsing cached reminders: $e');
+      return [];
+    }
+  }
+
+  /// Removes cached reminders
+  Future<void> removeCachedReminders() async {
+    await _cache.removeFile(_remindersKey);
   }
 }
